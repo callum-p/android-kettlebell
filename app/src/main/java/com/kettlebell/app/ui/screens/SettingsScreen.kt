@@ -64,6 +64,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kettlebell.app.BuildConfig
 import com.kettlebell.app.data.ExerciseCatalog
 import com.kettlebell.app.debug.AppLogger
 import com.kettlebell.app.debug.LogEntry
@@ -660,7 +661,7 @@ private fun AboutCard() {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Version 1.1 · No account needed",
+                text = "Version ${BuildConfig.VERSION_NAME} · No account needed",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
