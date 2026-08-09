@@ -1,5 +1,6 @@
 package com.kettlebell.app.ui.screens
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
@@ -38,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -192,10 +196,20 @@ private fun ExerciseCard(
     onAddSet: () -> Unit,
     onRemoveExercise: () -> Unit,
 ) {
+    val allComplete = active.sets.isNotEmpty() && active.sets.all { it.completed }
+    var expanded by remember { mutableStateOf(true) }
+    // Auto-collapse once every set is done; expand again if that changes (e.g. a set is added
+    // or un-completed). Manual toggles in between are preserved because this only fires on change.
+    LaunchedEffect(allComplete) { expanded = !allComplete }
+
     Surface(
-        color = MaterialTheme.colorScheme.surface,
+        color = if (allComplete) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
         shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -205,6 +219,15 @@ private fun ExerciseCard(
                         .clickable(onClick = onOpenExercise),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (allComplete) {
+                            Icon(
+                                Icons.Filled.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                        }
                         Text(
                             text = active.exercise.name,
                             style = MaterialTheme.typography.titleMedium,
@@ -221,6 +244,13 @@ private fun ExerciseCard(
                     Spacer(Modifier.height(4.dp))
                     LevelChip(active.exercise.level)
                 }
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = if (expanded) "Collapse" else "Expand",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 IconButton(onClick = onRemoveExercise) {
                     Icon(
                         Icons.Filled.Delete,
@@ -229,31 +259,46 @@ private fun ExerciseCard(
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Rest ${active.exercise.defaultRestSeconds}s between sets",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(8.dp))
 
-            active.sets.forEach { set ->
-                SetRow(
-                    set = set,
-                    onWeightDown = { onWeightDown(set) },
-                    onWeightUp = { onWeightUp(set) },
-                    onRepsDown = { onRepsDown(set) },
-                    onRepsUp = { onRepsUp(set) },
-                    onToggle = { onToggle(set) },
-                    onDelete = { onDeleteSet(set) },
+            if (expanded) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Rest ${active.exercise.defaultRestSeconds}s between sets",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
+                Spacer(Modifier.height(8.dp))
 
-            Spacer(Modifier.height(4.dp))
-            TextButton(onClick = onAddSet) {
-                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Add set")
+                active.sets.forEach { set ->
+                    SetRow(
+                        set = set,
+                        onWeightDown = { onWeightDown(set) },
+                        onWeightUp = { onWeightUp(set) },
+                        onRepsDown = { onRepsDown(set) },
+                        onRepsUp = { onRepsUp(set) },
+                        onToggle = { onToggle(set) },
+                        onDelete = { onDeleteSet(set) },
+                    )
+                }
+
+                Spacer(Modifier.height(4.dp))
+                TextButton(onClick = onAddSet) {
+                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Add set")
+                }
+            } else {
+                Spacer(Modifier.height(6.dp))
+                val completed = active.sets.filter { it.completed }
+                Text(
+                    text = if (completed.isEmpty()) {
+                        "${active.sets.size} sets · tap to expand"
+                    } else {
+                        completed.joinToString("   ") { "${formatWeight(it.weightKg)}×${it.reps}" }
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
