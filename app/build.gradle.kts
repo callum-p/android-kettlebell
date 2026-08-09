@@ -63,14 +63,18 @@ android {
     }
 
     signingConfigs {
-        // A committed, fixed debug keystore so every CI build is signed with the same key.
-        // Without this, GitHub's runners generate a random debug key per build and installing
-        // an update over a previous build fails with a signature mismatch.
+        // The release signing key is injected from CI secrets (base64 keystore decoded to a file,
+        // path + credentials passed via env). Every published build is signed with this one key so
+        // updates install in place. When the env isn't set (local dev), fall back to the Android
+        // default debug keystore. The keystore is NOT committed to source control.
         getByName("debug") {
-            storeFile = rootProject.file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            val keystorePath = System.getenv("SIGNING_KEYSTORE_FILE")
+            if (!keystorePath.isNullOrBlank() && file(keystorePath).exists()) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
+            }
         }
     }
 

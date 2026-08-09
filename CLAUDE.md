@@ -106,5 +106,15 @@ correct protects backup/restore too.
   construction — capturing it once leaves screens showing stale state.
 - **Don't read a `CompositionLocal` (e.g. `LocalWeightUnit.current`) inside a non-composable
   lambda** such as `joinToString { }`; hoist it into the composable body first.
-- The debug signing keystore is committed (`debug.keystore`) so every CI build is signed with
-  the same key and updates install over previous builds. Don't regenerate it.
+## Signing
+
+- The signing key is **not** in source control. CI injects it from repository secrets:
+  `SIGNING_KEYSTORE_BASE64` (base64 of the keystore), `SIGNING_KEYSTORE_PASSWORD`, and
+  `SIGNING_KEY_ALIAS`. The workflows decode it to a temp file and `build.gradle.kts` reads the
+  path + credentials from the `SIGNING_KEYSTORE_FILE` / `SIGNING_KEYSTORE_PASSWORD` /
+  `SIGNING_KEY_ALIAS` env vars.
+- Every release is signed with this one key so updates (and the in-app updater) install in place.
+  **Don't rotate the key** without accepting that installed apps must be reinstalled and the
+  Google Drive OAuth SHA-1 must be updated.
+- Locally (no secret/env), builds fall back to the Android default debug keystore — fine for
+  development, but such APKs won't update over a CI-signed install.

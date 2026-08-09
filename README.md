@@ -147,10 +147,9 @@ OAuth client, because Google authorizes Drive access per app identity:
    `drive.appdata` scope (a private, app-specific folder).
 3. Create an **OAuth client ID → Android** with:
    - Package name: `com.kettlebell.app`
-   - SHA-1 of the signing certificate. For the CI debug builds that is the committed
-     `debug.keystore`:
-     `E2:FB:F5:27:E8:1C:22:10:94:7D:42:67:5A:C2:31:4D:C1:50:71:4D`
-     (or run `keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey`).
+   - SHA-1 of the release signing certificate:
+     `C7:02:C9:46:97:E0:CA:C8:A6:36:B0:D5:0E:E9:A8:84:FE:CE:5D:A5`
+     (the key is injected in CI from the `SIGNING_KEYSTORE_BASE64` secret, not committed).
 
 No `google-services.json` is needed. Until this is set up, tapping **Connect Google Drive**
 will fail gracefully and the app keeps working with local/offline storage.

@@ -44,7 +44,21 @@ jobs:
           path: app/build/reports/tests/testDebugUnitTest
           if-no-files-found: ignore
 
+      - name: Decode signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/signing.keystore"
+            echo "SIGNING_KEYSTORE_FILE=$RUNNER_TEMP/signing.keystore" >> "$GITHUB_ENV"
+          else
+            echo "No SIGNING_KEYSTORE_BASE64 secret set; using the default debug keystore."
+          fi
+
       - name: Build debug APK
+        env:
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK artifact
