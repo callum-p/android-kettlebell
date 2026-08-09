@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.SportsGymnastics
 import androidx.compose.material.icons.filled.SportsMartialArts
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -59,6 +60,7 @@ fun StartWorkoutScreen(
     onStartRoutine: (RoutineWithExercises) -> Unit,
     onCreateRoutine: () -> Unit,
     onEditRoutine: (Long) -> Unit,
+    onOpenTimers: () -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -84,6 +86,8 @@ fun StartWorkoutScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item { QuickStartCard { onStart("Quick Workout", null) } }
+
+            item { TimerCard(onClick = onOpenTimers) }
 
             item {
                 Text(
@@ -174,6 +178,42 @@ private fun QuickStartCard(onClick: () -> Unit) {
                     contentColor = MaterialTheme.colorScheme.primary,
                 ),
             ) { Text("Start empty workout") }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimerCard(onClick: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Filled.Timer,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(30.dp),
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Timed workout",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "EMOM · Interval · AMRAP",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

@@ -63,6 +63,7 @@ import com.kettlebell.app.ui.screens.HistoryScreen
 import com.kettlebell.app.ui.screens.HomeScreen
 import com.kettlebell.app.ui.screens.SettingsScreen
 import com.kettlebell.app.ui.screens.StartWorkoutScreen
+import com.kettlebell.app.ui.screens.TimedWorkoutScreen
 import kotlinx.coroutines.delay
 
 object Routes {
@@ -77,6 +78,7 @@ object Routes {
     const val EXERCISE_ARG = "exerciseId"
     const val ROUTINE_EDITOR = "routine_editor"
     const val ROUTINE_ARG = "routineId"
+    const val TIMERS = "timers"
 
     fun exerciseDetail(id: String) = "$EXERCISE_DETAIL/$id"
     fun routineEditor(id: Long) = "$ROUTINE_EDITOR/$id"
@@ -247,8 +249,12 @@ private fun NavGraphBuilder.appDestinations(
             },
             onCreateRoutine = { navController.navigate(Routes.routineEditor(-1L)) },
             onEditRoutine = { id -> navController.navigate(Routes.routineEditor(id)) },
+            onOpenTimers = { navController.navigate(Routes.TIMERS) },
             onBack = { navController.popBackStack() },
         )
+    }
+    composable(Routes.TIMERS) {
+        TimedWorkoutScreen(onBack = { navController.popBackStack() })
     }
     composable(
         route = "${Routes.ROUTINE_EDITOR}/{${Routes.ROUTINE_ARG}}",
