@@ -111,6 +111,12 @@ class WorkoutRepository(
     suspend fun removeSessionExercise(sessionExercise: SessionExercise) =
         db.sessionExerciseDao().delete(sessionExercise)
 
+    /** Swap the ordering positions of two exercises within a session. */
+    suspend fun swapSessionExercisePositions(a: SessionExercise, b: SessionExercise) {
+        db.sessionExerciseDao().update(a.copy(position = b.position))
+        db.sessionExerciseDao().update(b.copy(position = a.position))
+    }
+
     suspend fun finishWorkout(session: WorkoutSession, now: Long) =
         db.sessionDao().update(session.copy(finishedAt = now))
 

@@ -46,6 +46,9 @@ interface SessionExerciseDao {
     @Insert
     suspend fun insert(sessionExercise: SessionExercise): Long
 
+    @Update
+    suspend fun update(sessionExercise: SessionExercise)
+
     @Delete
     suspend fun delete(sessionExercise: SessionExercise)
 

@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
@@ -114,10 +116,17 @@ fun ActiveWorkoutScreen(
         ) {
             item { WorkoutSummary(activeWorkout) }
 
-            items(activeWorkout.exercises, key = { it.sessionExercise.id }) { active ->
+            itemsIndexed(
+                activeWorkout.exercises,
+                key = { _, active -> active.sessionExercise.id },
+            ) { index, active ->
                 ExerciseCard(
                     active = active,
                     bells = ownedBells,
+                    canMoveUp = index > 0,
+                    canMoveDown = index < activeWorkout.exercises.size - 1,
+                    onMoveUp = { viewModel.moveExercise(active, up = true) },
+                    onMoveDown = { viewModel.moveExercise(active, up = false) },
                     onOpenExercise = { onOpenExercise(active.exercise.id) },
                     onWeightDown = { set -> viewModel.setWeight(set, viewModel.nextBellDown(set.weightKg)) },
                     onWeightUp = { set -> viewModel.setWeight(set, viewModel.nextBellUp(set.weightKg)) },
@@ -189,6 +198,10 @@ private fun SummaryStat(value: String, label: String, modifier: Modifier = Modif
 private fun ExerciseCard(
     active: ActiveExercise,
     bells: List<Double>,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
     onOpenExercise: () -> Unit,
     onWeightDown: (WorkoutSet) -> Unit,
     onWeightUp: (WorkoutSet) -> Unit,
@@ -246,6 +259,20 @@ private fun ExerciseCard(
                     }
                     Spacer(Modifier.height(4.dp))
                     LevelChip(active.exercise.level)
+                }
+                IconButton(onClick = onMoveUp, enabled = canMoveUp) {
+                    Icon(
+                        Icons.Filled.KeyboardArrowUp,
+                        contentDescription = "Move up",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onMoveDown, enabled = canMoveDown) {
+                    Icon(
+                        Icons.Filled.KeyboardArrowDown,
+                        contentDescription = "Move down",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(

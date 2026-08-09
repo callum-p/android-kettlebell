@@ -401,6 +401,19 @@ class WorkoutViewModel(
         repository.removeSessionExercise(active.sessionExercise)
     }
 
+    fun moveExercise(active: ActiveExercise, up: Boolean) = launchSafely("moveExercise") {
+        val data = rawData.value
+        val session = data.sessions.firstOrNull { it.finishedAt == null } ?: return@launchSafely
+        val ordered = data.sessionExercises
+            .filter { it.sessionId == session.id }
+            .sortedBy { it.position }
+        val index = ordered.indexOfFirst { it.id == active.sessionExercise.id }
+        val swapIndex = if (up) index - 1 else index + 1
+        if (index >= 0 && swapIndex in ordered.indices) {
+            repository.swapSessionExercisePositions(ordered[index], ordered[swapIndex])
+        }
+    }
+
     fun finishWorkout() = launchSafely("finishWorkout") {
         val session = rawData.value.sessions.firstOrNull { it.finishedAt == null } ?: return@launchSafely
         repository.finishWorkout(session, System.currentTimeMillis())
