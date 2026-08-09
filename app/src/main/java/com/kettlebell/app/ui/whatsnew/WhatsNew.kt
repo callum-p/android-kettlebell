@@ -13,14 +13,17 @@ object WhatsNew {
     private const val PREFS = "whats_new"
     private const val KEY_LAST_SEEN_VERSION = "last_seen_version_code"
 
+    /** The changelog for this build as display bullets. */
+    val entries: List<String> = parseEntries(BuildConfig.CHANGELOG)
+
     /**
-     * The changelog for this build as display bullets. Lines starting with "- " begin a new
-     * bullet; any following non-bullet lines are folded into it (so a wrapped line never shows
-     * up as its own stray bullet).
+     * Parses raw changelog text into display bullets. Lines starting with "- " begin a new bullet;
+     * any following non-bullet lines are folded into it (so a wrapped line never shows up as its
+     * own stray bullet). Exposed for testing.
      */
-    val entries: List<String> = buildList {
-        for (raw in BuildConfig.CHANGELOG.split("\n")) {
-            val line = raw.trim()
+    fun parseEntries(raw: String): List<String> = buildList {
+        for (rawLine in raw.split("\n")) {
+            val line = rawLine.trim()
             when {
                 line.isEmpty() -> {}
                 line.startsWith("- ") -> add(line.removePrefix("- ").trim())

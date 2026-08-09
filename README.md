@@ -20,7 +20,7 @@ No account, no paywall, no internet required. Install and train.
   modes for conditioning finishers.
 - 📈 **Watch the numbers climb** — personal records, weekly volume, and a training heatmap turn
   consistency into something you can see.
-- 🏅 **Earn it** — 23 achievement badges celebrate streaks, milestones, and PRs with a satisfying
+- 🏅 **Earn it** — 22 achievement badges celebrate streaks, milestones, and PRs with a satisfying
   little fanfare.
 - 🎨 **Make it yours** — light/dark themes, Material You dynamic colour, kg or lb, and your own
   saved routines.
@@ -58,7 +58,7 @@ No account, no paywall, no internet required. Install and train.
   each exercise and set.
 - **Share your session** — export a clean text recap of any workout (totals + per-exercise sets
   with RPE/notes) straight to the Android share sheet.
-- **Achievements** — 23 badges for streaks, totals, volume, variety, and personal records, with
+- **Achievements** — 22 badges for streaks, totals, volume, variety, and personal records, with
   celebratory notifications when you unlock one.
 - **Home-screen widget** — glance at your total workouts and this week's count without opening
   the app.
@@ -103,16 +103,17 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Continuous integration & releases
 
-- The [`Build APK`](.github/workflows/build-apk.yml) workflow compiles the app on every push
-  and uploads the debug APK as a workflow artifact (`kettlebell-debug-apk`), retained for
-  **1 day**.
+- The [`Build APK`](.github/workflows/build-apk.yml) workflow runs the JVM unit tests
+  (`./gradlew testDebugUnitTest`) and then compiles the app on every push, uploading the debug
+  APK as a workflow artifact (`kettlebell-debug-apk`), retained for **1 day**. A failing test
+  fails the build.
 - The [`Release`](.github/workflows/release.yml) workflow runs when a `v*` tag is pushed. It
   builds the signed APK, pulls that version's notes from [`CHANGELOG.md`](CHANGELOG.md), and
   publishes a **GitHub Release** with those notes and the APK attached
   (`kettlebell-v<version>.apk`). Cut a release with:
 
   ```bash
-  git tag v1.2 && git push origin v1.2
+  git tag v1.3 && git push origin v1.3
   ```
 
 The in-app **"What's new"** changelog is computed at build time from `CHANGELOG.md` and baked
