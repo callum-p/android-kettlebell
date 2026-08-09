@@ -215,7 +215,44 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
                 completedAt = if (nowComplete) System.currentTimeMillis() else null,
             ),
         )
-        if (nowComplete) startRest(exercise.defaultRestSeconds, exercise.name)
+        if (nowComplete) {
+            // Rest banner points at what's actually next: more sets of this exercise, otherwise
+            // the next exercise with work left, otherwise the workout is done.
+            startRest(exercise.defaultRestSeconds, nextUpExerciseName(set, nowComplete = true) ?: "")
+        }
+    }
+
+    /**
+     * Name of what to do after completing [afterSet]: the same exercise if it still has sets,
+     * else the next exercise in order with incomplete sets, else null when the workout is done.
+     * [nowComplete] overrides [afterSet]'s stored state since the DB write is still in flight.
+     */
+    private fun nextUpExerciseName(afterSet: WorkoutSet, nowComplete: Boolean): String? {
+        val data = rawData.value
+        val session = data.sessions.firstOrNull { it.finishedAt == null } ?: return null
+        val ordered = data.sessionExercises
+            .filter { it.sessionId == session.id }
+            .sortedBy { it.position }
+        val setsBySessionExercise = data.sets.groupBy { it.sessionExerciseId }
+        fun isDone(s: WorkoutSet): Boolean = if (s.id == afterSet.id) nowComplete else s.completed
+
+        val currentIndex = ordered.indexOfFirst { it.id == afterSet.sessionExerciseId }
+        if (currentIndex < 0) return null
+
+        val currentSets = setsBySessionExercise[afterSet.sessionExerciseId].orEmpty()
+        if (currentSets.any { !isDone(it) }) {
+            return ExerciseCatalog.byId(ordered[currentIndex].exerciseId)?.name
+        }
+
+        val searchOrder = (currentIndex + 1 until ordered.size) + (0 until currentIndex)
+        for (index in searchOrder) {
+            val sessionExercise = ordered[index]
+            val sets = setsBySessionExercise[sessionExercise.id].orEmpty()
+            if (sets.isEmpty() || sets.any { !isDone(it) }) {
+                return ExerciseCatalog.byId(sessionExercise.exerciseId)?.name
+            }
+        }
+        return null
     }
 
     fun deleteSet(set: WorkoutSet) = launchSafely("deleteSet") { repository.deleteSet(set) }

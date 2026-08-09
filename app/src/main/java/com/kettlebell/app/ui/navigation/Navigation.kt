@@ -252,7 +252,11 @@ private fun RestTimerBar(
                     color = content.copy(alpha = 0.85f),
                 )
                 Text(
-                    text = if (timer.finished) "Ready for ${timer.exerciseName}" else formatClock(timer.remainingSeconds),
+                    text = when {
+                        !timer.finished -> formatClock(timer.remainingSeconds)
+                        timer.exerciseName.isBlank() -> "Workout complete!"
+                        else -> "Ready for ${timer.exerciseName}"
+                    },
                     style = MaterialTheme.typography.headlineMedium,
                     color = content,
                 )
