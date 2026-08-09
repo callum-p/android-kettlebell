@@ -104,6 +104,7 @@ fun HistoryScreen(
 @Composable
 private fun SessionCard(summary: SessionSummary, onDelete: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    val unit = LocalWeightUnit.current
 
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -143,7 +144,7 @@ private fun SessionCard(summary: SessionSummary, onDelete: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 Metric("${summary.completedSets}", "sets")
-                Metric(formatVolume(summary.totalVolumeKg, LocalWeightUnit.current), "volume")
+                Metric(formatVolume(summary.totalVolumeKg, unit), "volume")
                 summary.durationMinutes?.let { Metric("${it}m", "duration") }
             }
 
@@ -161,7 +162,7 @@ private fun SessionCard(summary: SessionSummary, onDelete: () -> Unit) {
                             text = if (done.isEmpty()) {
                                 "No sets completed"
                             } else {
-                                done.joinToString("   ") { "${formatWeight(it.weightKg, LocalWeightUnit.current)}×${it.reps}" }
+                                done.joinToString("   ") { "${formatWeight(it.weightKg, unit)}×${it.reps}" }
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

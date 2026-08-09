@@ -290,12 +290,13 @@ private fun ExerciseCard(
                 }
             } else {
                 Spacer(Modifier.height(6.dp))
+                val unit = LocalWeightUnit.current
                 val completed = active.sets.filter { it.completed }
                 Text(
                     text = if (completed.isEmpty()) {
                         "${active.sets.size} sets · tap to expand"
                     } else {
-                        completed.joinToString("   ") { "${formatWeight(it.weightKg, LocalWeightUnit.current)}×${it.reps}" }
+                        completed.joinToString("   ") { "${formatWeight(it.weightKg, unit)}×${it.reps}" }
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

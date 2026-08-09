@@ -321,6 +321,7 @@ private fun HowToCard(exercise: Exercise) {
 
 @Composable
 private fun HistoryRow(entry: ExerciseHistoryEntry) {
+    val unit = LocalWeightUnit.current
     Surface(
         color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(16.dp),
@@ -337,13 +338,13 @@ private fun HistoryRow(entry: ExerciseHistoryEntry) {
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = entry.sets.joinToString("   ") { "${formatWeight(it.weightKg, LocalWeightUnit.current)}×${it.reps}" },
+                    text = entry.sets.joinToString("   ") { "${formatWeight(it.weightKg, unit)}×${it.reps}" },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Text(
-                text = "top ${formatWeight(entry.topWeightKg, LocalWeightUnit.current)}",
+                text = "top ${formatWeight(entry.topWeightKg, unit)}",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
