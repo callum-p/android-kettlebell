@@ -41,6 +41,8 @@ import com.kettlebell.app.ui.model.RoutineWithExercises
 import com.kettlebell.app.ui.model.SessionSummary
 import com.kettlebell.app.ui.model.WorkoutUiState
 import com.kettlebell.app.ui.theme.ThemeMode
+import com.kettlebell.app.update.ReleaseInfo
+import com.kettlebell.app.update.UpdateChecker
 import com.kettlebell.app.widget.KettlebellWidgetProvider
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -86,6 +88,52 @@ class WorkoutViewModel(
     fun setWeightUnit(unit: WeightUnit) = settingsStore.setWeightUnit(unit)
 
     fun setOwnedBells(bells: Set<Double>) = settingsStore.setOwnedBells(bells)
+
+    // --- In-app updates ---
+    private val _availableUpdate = MutableStateFlow<ReleaseInfo?>(null)
+    val availableUpdate: StateFlow<ReleaseInfo?> = _availableUpdate.asStateFlow()
+
+    private val _updateDownloadPercent = MutableStateFlow(0)
+    val updateDownloadPercent: StateFlow<Int> = _updateDownloadPercent.asStateFlow()
+
+    private val _updateDownloading = MutableStateFlow(false)
+    val updateDownloading: StateFlow<Boolean> = _updateDownloading.asStateFlow()
+
+    /** Check GitHub for a newer release; surfaces it via [availableUpdate] unless the user skipped it. */
+    fun checkForUpdate() = viewModelScope.launch {
+        val release = UpdateChecker.check() ?: return@launch
+        if (release.versionCode != settingsStore.skippedUpdateVersion()) {
+            _availableUpdate.value = release
+        }
+    }
+
+    /** Dismiss the update prompt for now (it can reappear next launch). */
+    fun dismissUpdate() {
+        _availableUpdate.value = null
+    }
+
+    /** Don't prompt for this version again. */
+    fun skipUpdate() {
+        _availableUpdate.value?.let { settingsStore.skipUpdateVersion(it.versionCode) }
+        _availableUpdate.value = null
+    }
+
+    /** Download the pending update's APK (reporting progress) and hand it to the system installer. */
+    fun downloadAndInstallUpdate() {
+        val release = _availableUpdate.value ?: return
+        launchSafely("downloadUpdate") {
+            _updateDownloading.value = true
+            _updateDownloadPercent.value = 0
+            val file = UpdateChecker.download(appContext, release) { pct ->
+                _updateDownloadPercent.value = pct
+            }
+            _updateDownloading.value = false
+            if (file != null) {
+                UpdateChecker.install(appContext, file)
+                _availableUpdate.value = null
+            }
+        }
+    }
 
     fun setReminderEnabled(enabled: Boolean) {
         settingsStore.setReminderEnabled(enabled)
@@ -176,6 +224,7 @@ class WorkoutViewModel(
                 }
             }
         }
+        checkForUpdate()
     }
 
     private fun checkForNewRecords(history: List<com.kettlebell.app.ui.model.SessionSummary>) {

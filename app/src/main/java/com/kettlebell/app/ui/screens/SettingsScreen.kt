@@ -2,6 +2,7 @@ package com.kettlebell.app.ui.screens
 
 import android.content.Intent
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
@@ -128,6 +129,16 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
                     onClick = { showReleaseNotes = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Release notes") }
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = {
+                        viewModel.checkForUpdate()
+                        Toast.makeText(context, "Checking for updates…", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Check for updates") }
             }
 
             item {

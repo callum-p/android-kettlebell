@@ -65,6 +65,12 @@ class SettingsStore(context: Context) {
         _reminderMinute.value = minute
     }
 
+    fun skipUpdateVersion(versionCode: Int) {
+        prefs.edit().putInt(KEY_SKIPPED_UPDATE, versionCode).apply()
+    }
+
+    fun skippedUpdateVersion(): Int = prefs.getInt(KEY_SKIPPED_UPDATE, 0)
+
     fun setThemeMode(mode: ThemeMode) {
         prefs.edit().putString(KEY_THEME_MODE, mode.name).apply()
         _themeMode.value = mode
@@ -97,5 +103,6 @@ class SettingsStore(context: Context) {
         const val KEY_REMINDER_MINUTE = "reminder_minute"
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_DYNAMIC_COLOR = "dynamic_color"
+        const val KEY_SKIPPED_UPDATE = "skipped_update_version"
     }
 }

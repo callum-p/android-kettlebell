@@ -78,6 +78,8 @@ No account, no paywall, no internet required. Install and train.
   Android 12+.
 - **Daily reminders** — an optional nudge at a time you choose so you never skip a session.
 - **What's new** — a tidy changelog appears after each update so you always know what's changed.
+- **In-app updates** — checks GitHub for a newer release on launch and can download &amp; install it
+  for you (no Play Store needed).
 
 ### Own your data
 - **Local & private** — everything is stored on-device in a SQLite database via Room. No

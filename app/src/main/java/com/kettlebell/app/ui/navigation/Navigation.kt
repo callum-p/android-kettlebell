@@ -64,6 +64,7 @@ import com.kettlebell.app.ui.screens.HomeScreen
 import com.kettlebell.app.ui.screens.SettingsScreen
 import com.kettlebell.app.ui.screens.StartWorkoutScreen
 import com.kettlebell.app.ui.screens.TimedWorkoutScreen
+import com.kettlebell.app.ui.update.UpdateGate
 import com.kettlebell.app.ui.whatsnew.WhatsNewGate
 import kotlinx.coroutines.delay
 
@@ -171,6 +172,7 @@ fun KettlebellRoot() {
         }
 
         WhatsNewGate()
+        UpdateGate(viewModel)
     }
     }
 }
