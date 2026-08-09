@@ -1,10 +1,8 @@
 package com.kettlebell.app.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,12 +15,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Info
@@ -284,58 +282,66 @@ private fun SetRow(
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .background(MaterialTheme.colorScheme.surface, CircleShape)
-                    .clickable(onClick = onDelete),
-                contentAlignment = Alignment.Center,
-            ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "${set.setNumber}",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = "Set ${set.setNumber}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Remove set",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Stepper(
+                    value = formatWeight(set.weightKg),
+                    label = "Weight",
+                    onDecrement = onWeightDown,
+                    onIncrement = onWeightUp,
+                    canDecrement = canWeightDown,
+                    canIncrement = canWeightUp,
+                    modifier = Modifier.weight(1f),
+                )
+                Stepper(
+                    value = "${set.reps}",
+                    label = "Reps",
+                    onDecrement = onRepsDown,
+                    onIncrement = onRepsUp,
+                    canDecrement = set.reps > 0,
+                    modifier = Modifier.weight(1f),
                 )
             }
 
-            Stepper(
-                value = formatWeight(set.weightKg),
-                label = "Weight",
-                onDecrement = onWeightDown,
-                onIncrement = onWeightUp,
-                canDecrement = canWeightDown,
-                canIncrement = canWeightUp,
-            )
-            Stepper(
-                value = "${set.reps}",
-                label = "Reps",
-                onDecrement = onRepsDown,
-                onIncrement = onRepsUp,
-                canDecrement = set.reps > 0,
-            )
-
-            Spacer(Modifier.weight(1f))
-
-            IconButton(onClick = onToggle) {
-                if (set.completed) {
-                    Icon(
-                        Icons.Filled.CheckCircle,
-                        contentDescription = "Mark set incomplete",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(30.dp),
-                    )
-                } else {
-                    Icon(
-                        Icons.Outlined.Circle,
-                        contentDescription = "Mark set complete",
-                        tint = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.size(30.dp),
-                    )
+            Spacer(Modifier.height(12.dp))
+            if (set.completed) {
+                Button(
+                    onClick = onToggle,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Completed — tap to undo")
+                }
+            } else {
+                OutlinedButton(
+                    onClick = onToggle,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.Circle, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Mark set complete")
                 }
             }
         }
