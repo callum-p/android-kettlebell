@@ -37,17 +37,23 @@ fun UpdateGate(viewModel: WorkoutViewModel) {
         text = {
             Column {
                 Text(
-                    text = "Version ${release.version} is available (you have this older build).",
+                    text = "Version ${release.version} is available.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 if (release.notes.isNotBlank()) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        text = "What's new",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         text = release.notes,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState()),
+                        modifier = Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState()),
                     )
                 }
                 if (downloading) {
@@ -69,11 +75,12 @@ fun UpdateGate(viewModel: WorkoutViewModel) {
             TextButton(
                 onClick = { viewModel.downloadAndInstallUpdate() },
                 enabled = !downloading,
-            ) { Text(if (downloading) "Downloading…" else "Download & install") }
+            ) { Text(if (downloading) "Downloading…" else "Update now") }
         },
         dismissButton = {
             if (!downloading) {
-                TextButton(onClick = { viewModel.skipUpdate() }) { Text("Skip") }
+                // Persists the skip: won't prompt again until a newer version is released.
+                TextButton(onClick = { viewModel.skipUpdate() }) { Text("Skip this version") }
             }
         },
     )
