@@ -66,8 +66,17 @@ class WorkoutViewModel(
 
     val driveStatus: StateFlow<DriveStatus> = driveSync.status
     val weightUnit: StateFlow<WeightUnit> = settingsStore.weightUnit
+    val ownedBells: StateFlow<List<Double>> = settingsStore.ownedBells
 
     fun setWeightUnit(unit: WeightUnit) = settingsStore.setWeightUnit(unit)
+
+    fun setOwnedBells(bells: Set<Double>) = settingsStore.setOwnedBells(bells)
+
+    fun nextBellUp(weight: Double): Double =
+        ProgressionEngine.nextBellAbove(weight, ownedBells.value)
+
+    fun nextBellDown(weight: Double): Double =
+        ProgressionEngine.nextBellBelow(weight, ownedBells.value)
 
     private val rawData: StateFlow<RawData> = combine(
         repository.exercises,
@@ -264,7 +273,11 @@ class WorkoutViewModel(
         exercise: Exercise,
         unit: WeightUnit = weightUnit.value,
     ): Recommendation =
-        ProgressionEngine.recommend(exercise, lastSessionSets(exercise.id)) { formatWeight(it, unit) }
+        ProgressionEngine.recommend(
+            exercise,
+            lastSessionSets(exercise.id),
+            settingsStore.ownedBells.value,
+        ) { formatWeight(it, unit) }
 
     fun exerciseHistory(exerciseId: String): List<ExerciseHistoryEntry> {
         val data = rawData.value
@@ -320,7 +333,8 @@ class WorkoutViewModel(
 
     fun addSet(active: ActiveExercise) = launchSafely("addSet") {
         val template = active.sets.lastOrNull()
-        val weight = template?.weightKg ?: ProgressionEngine.snap(active.exercise.startingWeightKg)
+        val weight = template?.weightKg
+            ?: ProgressionEngine.snap(active.exercise.startingWeightKg, ownedBells.value)
         val reps = template?.reps ?: active.exercise.repRangeHigh
         repository.addSet(active.sessionExercise.id, weight, reps)
     }

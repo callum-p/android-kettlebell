@@ -59,12 +59,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kettlebell.app.data.ExerciseCatalog
 import com.kettlebell.app.debug.AppLogger
 import com.kettlebell.app.debug.LogEntry
 import com.kettlebell.app.ui.WorkoutViewModel
 import com.kettlebell.app.ui.format.WeightUnit
 import com.kettlebell.app.ui.format.formatDate
 import com.kettlebell.app.ui.format.formatTime
+import com.kettlebell.app.ui.format.formatWeight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +75,7 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
     val entries by AppLogger.entries.collectAsStateWithLifecycle()
     val driveStatus by viewModel.driveStatus.collectAsStateWithLifecycle()
     val weightUnit by viewModel.weightUnit.collectAsStateWithLifecycle()
+    val ownedBells by viewModel.ownedBells.collectAsStateWithLifecycle()
 
     val signInLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -110,6 +113,18 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
                 UnitsCard(
                     selected = weightUnit,
                     onSelect = { viewModel.setWeightUnit(it) },
+                )
+            }
+
+            item {
+                MyBellsCard(
+                    owned = ownedBells.toSet(),
+                    unit = weightUnit,
+                    onToggle = { bell ->
+                        val current = ownedBells.toMutableSet()
+                        if (!current.add(bell)) current.remove(bell)
+                        viewModel.setOwnedBells(current)
+                    },
                 )
             }
 
@@ -205,6 +220,51 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
                 TextButton(onClick = { pendingRestoreUri = null }) { Text("Cancel") }
             },
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MyBellsCard(owned: Set<Double>, unit: WeightUnit, onToggle: (Double) -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                text = "My kettlebells",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Pick the sizes you own — recommendations only suggest weights you can load.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+            ExerciseCatalog.BELLS.chunked(4).forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    row.forEach { bell ->
+                        FilterChip(
+                            selected = bell in owned,
+                            onClick = { onToggle(bell) },
+                            label = { Text(formatWeight(bell, unit)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
     }
 }
 

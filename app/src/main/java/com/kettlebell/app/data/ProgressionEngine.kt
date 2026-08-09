@@ -26,12 +26,13 @@ object ProgressionEngine {
     fun recommend(
         exercise: Exercise,
         lastSessionSets: List<WorkoutSet>,
+        bells: List<Double> = ExerciseCatalog.BELLS,
         format: (Double) -> String = { defaultFormat(it) },
     ): Recommendation {
         val completed = lastSessionSets.filter { it.completed }
         if (completed.isEmpty()) {
             return Recommendation(
-                weightKg = snap(exercise.startingWeightKg),
+                weightKg = snap(exercise.startingWeightKg, bells),
                 sets = exercise.defaultSets,
                 repLow = exercise.repRangeLow,
                 repHigh = exercise.repRangeHigh,
@@ -49,7 +50,7 @@ object ProgressionEngine {
 
         return when {
             hitEnoughSets && minReps >= exercise.repRangeHigh -> {
-                val next = nextBellAbove(topWeight)
+                val next = nextBellAbove(topWeight, bells)
                 if (next > topWeight) {
                     Recommendation(
                         weightKg = next,
@@ -73,7 +74,7 @@ object ProgressionEngine {
             }
 
             maxReps < exercise.repRangeLow -> {
-                val down = nextBellBelow(topWeight)
+                val down = nextBellBelow(topWeight, bells)
                 Recommendation(
                     weightKg = down,
                     sets = exercise.defaultSets,
@@ -96,14 +97,18 @@ object ProgressionEngine {
         }
     }
 
-    fun nextBellAbove(weight: Double): Double =
-        ExerciseCatalog.BELLS.firstOrNull { it > weight + 0.001 } ?: ExerciseCatalog.BELLS.last()
+    fun nextBellAbove(weight: Double, bells: List<Double> = ExerciseCatalog.BELLS): Double {
+        val sorted = bells.sorted()
+        return sorted.firstOrNull { it > weight + 0.001 } ?: sorted.lastOrNull() ?: weight
+    }
 
-    fun nextBellBelow(weight: Double): Double =
-        ExerciseCatalog.BELLS.lastOrNull { it < weight - 0.001 } ?: ExerciseCatalog.BELLS.first()
+    fun nextBellBelow(weight: Double, bells: List<Double> = ExerciseCatalog.BELLS): Double {
+        val sorted = bells.sorted()
+        return sorted.lastOrNull { it < weight - 0.001 } ?: sorted.firstOrNull() ?: weight
+    }
 
-    fun snap(weight: Double): Double =
-        ExerciseCatalog.BELLS.minByOrNull { kotlin.math.abs(it - weight) } ?: weight
+    fun snap(weight: Double, bells: List<Double> = ExerciseCatalog.BELLS): Double =
+        bells.minByOrNull { kotlin.math.abs(it - weight) } ?: weight
 
     private fun defaultFormat(weight: Double): String =
         if (weight % 1.0 == 0.0) "${weight.toInt()} kg" else "$weight kg"

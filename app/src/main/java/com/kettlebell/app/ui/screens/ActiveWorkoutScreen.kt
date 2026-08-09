@@ -49,8 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.kettlebell.app.data.ExerciseCatalog
-import com.kettlebell.app.data.ProgressionEngine
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kettlebell.app.data.db.Exercise
 import com.kettlebell.app.data.db.WorkoutSet
 import com.kettlebell.app.ui.WorkoutViewModel
@@ -75,6 +74,7 @@ fun ActiveWorkoutScreen(
     onBack: () -> Unit,
 ) {
     var showDiscardDialog by remember { mutableStateOf(false) }
+    val ownedBells by viewModel.ownedBells.collectAsStateWithLifecycle()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -117,9 +117,10 @@ fun ActiveWorkoutScreen(
             items(activeWorkout.exercises, key = { it.sessionExercise.id }) { active ->
                 ExerciseCard(
                     active = active,
+                    bells = ownedBells,
                     onOpenExercise = { onOpenExercise(active.exercise.id) },
-                    onWeightDown = { set -> viewModel.setWeight(set, ProgressionEngine.nextBellBelow(set.weightKg)) },
-                    onWeightUp = { set -> viewModel.setWeight(set, ProgressionEngine.nextBellAbove(set.weightKg)) },
+                    onWeightDown = { set -> viewModel.setWeight(set, viewModel.nextBellDown(set.weightKg)) },
+                    onWeightUp = { set -> viewModel.setWeight(set, viewModel.nextBellUp(set.weightKg)) },
                     onRepsDown = { set -> viewModel.setReps(set, set.reps - 1) },
                     onRepsUp = { set -> viewModel.setReps(set, set.reps + 1) },
                     onToggle = { set -> viewModel.toggleSetCompleted(set, active.exercise) },
@@ -187,6 +188,7 @@ private fun SummaryStat(value: String, label: String, modifier: Modifier = Modif
 @Composable
 private fun ExerciseCard(
     active: ActiveExercise,
+    bells: List<Double>,
     onOpenExercise: () -> Unit,
     onWeightDown: (WorkoutSet) -> Unit,
     onWeightUp: (WorkoutSet) -> Unit,
@@ -273,6 +275,7 @@ private fun ExerciseCard(
                 active.sets.forEach { set ->
                     SetRow(
                         set = set,
+                        bells = bells,
                         onWeightDown = { onWeightDown(set) },
                         onWeightUp = { onWeightUp(set) },
                         onRepsDown = { onRepsDown(set) },
@@ -309,6 +312,7 @@ private fun ExerciseCard(
 @Composable
 private fun SetRow(
     set: WorkoutSet,
+    bells: List<Double>,
     onWeightDown: () -> Unit,
     onWeightUp: () -> Unit,
     onRepsDown: () -> Unit,
@@ -321,8 +325,8 @@ private fun SetRow(
     } else {
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
     }
-    val canWeightDown = set.weightKg > ExerciseCatalog.BELLS.first()
-    val canWeightUp = set.weightKg < ExerciseCatalog.BELLS.last()
+    val canWeightDown = set.weightKg > (bells.minOrNull() ?: set.weightKg)
+    val canWeightUp = set.weightKg < (bells.maxOrNull() ?: set.weightKg)
 
     Surface(
         color = bg,
