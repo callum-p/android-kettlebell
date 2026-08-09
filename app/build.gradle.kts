@@ -63,18 +63,29 @@ android {
     }
 
     signingConfigs {
-        // The release signing key is injected from CI secrets (base64 keystore decoded to a file,
-        // path + credentials passed via env). Every published release is signed with this one key so
-        // updates install in place. The keystore is NOT committed to source control; when the env
-        // isn't set (local dev), release builds are simply left unsigned and `debug` uses the
-        // Android default debug keystore.
+        // The signing key is injected from CI secrets (base64 keystore decoded to a file, path +
+        // credentials passed via env). It's applied to BOTH build types so every CI artifact —
+        // the `main`/PR debug APK testers install and the published release APK — is signed with
+        // the same stable key and installs/updates in place. The keystore is NOT committed. When
+        // the env isn't set (local dev, fork PRs), `debug` falls back to the Android default debug
+        // keystore and `release` is left unsigned.
+        val envKeystore = System.getenv("SIGNING_KEYSTORE_FILE")?.takeIf { it.isNotBlank() && file(it).exists() }
+        val storePass = System.getenv("SIGNING_KEYSTORE_PASSWORD")
+        val alias = System.getenv("SIGNING_KEY_ALIAS")
+        getByName("debug") {
+            if (envKeystore != null) {
+                storeFile = file(envKeystore)
+                storePassword = storePass
+                keyAlias = alias
+                keyPassword = storePass
+            }
+        }
         create("release") {
-            val keystorePath = System.getenv("SIGNING_KEYSTORE_FILE")
-            if (!keystorePath.isNullOrBlank() && file(keystorePath).exists()) {
-                storeFile = file(keystorePath)
-                storePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
-                keyPassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
+            if (envKeystore != null) {
+                storeFile = file(envKeystore)
+                storePassword = storePass
+                keyAlias = alias
+                keyPassword = storePass
             }
         }
     }
