@@ -38,7 +38,12 @@ abstract class KettlebellDatabase : RoomDatabase() {
                     KettlebellDatabase::class.java,
                     "kettlebell.db",
                 )
-                    .fallbackToDestructiveMigration()
+                    // Real migrations preserve the user's workouts across updates. We intentionally
+                    // do NOT use fallbackToDestructiveMigration() on upgrade — a missing migration
+                    // must fail loudly rather than silently wipe data. Downgrades (older APK over a
+                    // newer DB) are the only case allowed to rebuild.
+                    .addMigrations(*ALL_MIGRATIONS)
+                    .fallbackToDestructiveMigrationOnDowngrade()
                     .build()
                     .also { instance = it }
             }
