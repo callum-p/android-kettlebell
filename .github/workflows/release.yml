@@ -78,6 +78,22 @@ jobs:
             mv /tmp/CHANGELOG.md CHANGELOG.md
           fi
 
+          # Refresh the "latest release" block near the top of the README with this version
+          # (linked to the changelog) and a direct link to the release's APK.
+          APK_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/kettlebell-${TAG}.apk"
+          printf '📦 **Latest release: [%s](CHANGELOG.md)** — [Download the APK](%s)\n' "$TAG" "$APK_URL" > /tmp/release_line.md
+          BLOCK_LINE="$(cat /tmp/release_line.md)" python3 - <<'PY'
+          import os, re
+          line = os.environ["BLOCK_LINE"]
+          s = open("README.md").read()
+          replacement = "<!-- LATEST_RELEASE -->\n" + line + "\n<!-- /LATEST_RELEASE -->"
+          new, n = re.subn(r"<!-- LATEST_RELEASE -->.*?<!-- /LATEST_RELEASE -->",
+                           lambda _m: replacement, s, count=1, flags=re.S)
+          if n == 0:
+              raise SystemExit("::error::LATEST_RELEASE markers not found in README.md")
+          open("README.md", "w").write(new)
+          PY
+
           echo "versionCode -> ${NEW_CODE}, versionName -> ${VERSION}"
 
       - name: Commit the release bump into the default branch
@@ -88,7 +104,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add app/build.gradle.kts CHANGELOG.md
+          git add app/build.gradle.kts CHANGELOG.md README.md
 
           if git diff --cached --quiet; then
             echo "No version/changelog changes to commit — ${DEFAULT_BRANCH} already reflects ${VERSION}."
