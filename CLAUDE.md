@@ -97,8 +97,8 @@ correct protects backup/restore too.
 - `Build APK` (`.github/workflows/build-apk.yml`) runs on **push to `main`** and on **pull
   requests**: it runs `testDebugUnitTest` then `assembleDebug`, and uploads the debug APK
   artifact. A failing test fails the build.
-- `Release` (`.github/workflows/release.yml`) runs on a `v*` tag (or manual dispatch): tests,
-  builds the signed APK, and publishes the GitHub Release.
+- `Release` (`.github/workflows/release.yml`) runs on a `v*` tag: tests, builds the signed
+  **release** APK (`assembleRelease`, not a debug build), and publishes the GitHub Release.
 
 ## Compose gotchas that have bitten us
 

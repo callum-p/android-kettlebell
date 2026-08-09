@@ -64,10 +64,11 @@ android {
 
     signingConfigs {
         // The release signing key is injected from CI secrets (base64 keystore decoded to a file,
-        // path + credentials passed via env). Every published build is signed with this one key so
-        // updates install in place. When the env isn't set (local dev), fall back to the Android
-        // default debug keystore. The keystore is NOT committed to source control.
-        getByName("debug") {
+        // path + credentials passed via env). Every published release is signed with this one key so
+        // updates install in place. The keystore is NOT committed to source control; when the env
+        // isn't set (local dev), release builds are simply left unsigned and `debug` uses the
+        // Android default debug keystore.
+        create("release") {
             val keystorePath = System.getenv("SIGNING_KEYSTORE_FILE")
             if (!keystorePath.isNullOrBlank() && file(keystorePath).exists()) {
                 storeFile = file(keystorePath)
@@ -85,6 +86,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Sign the release build with the injected key when present (CI); otherwise leave it
+            // unsigned (local dev builds debug).
+            val releaseSigning = signingConfigs.getByName("release")
+            if (releaseSigning.storeFile != null) {
+                signingConfig = releaseSigning
+            }
         }
     }
 
