@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.History
@@ -52,6 +53,7 @@ import com.kettlebell.app.ui.format.LocalWeightUnit
 import com.kettlebell.app.ui.format.formatClock
 import com.kettlebell.app.ui.model.RestTimerState
 import com.kettlebell.app.ui.screens.ActiveWorkoutScreen
+import com.kettlebell.app.ui.screens.BadgesScreen
 import com.kettlebell.app.ui.screens.ExerciseDetailScreen
 import com.kettlebell.app.ui.screens.ExercisesScreen
 import com.kettlebell.app.ui.screens.HistoryScreen
@@ -64,6 +66,7 @@ object Routes {
     const val HOME = "home"
     const val EXERCISES = "exercises"
     const val HISTORY = "history"
+    const val BADGES = "badges"
     const val SETTINGS = "settings"
     const val START = "start"
     const val ACTIVE = "active"
@@ -79,6 +82,7 @@ private val tabs = listOf(
     TabItem(Routes.HOME, "Home", Icons.Filled.Home),
     TabItem(Routes.EXERCISES, "Exercises", Icons.Filled.FitnessCenter),
     TabItem(Routes.HISTORY, "History", Icons.Filled.History),
+    TabItem(Routes.BADGES, "Badges", Icons.Filled.EmojiEvents),
     TabItem(Routes.SETTINGS, "Settings", Icons.Filled.Settings),
 )
 
@@ -185,15 +189,17 @@ private fun NavGraphBuilder.appDestinations(
     // capturing it once at graph-construction time would leave every screen showing stale state.
     composable(Routes.HOME) {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-        val earnedBadges by viewModel.earnedBadges.collectAsStateWithLifecycle()
         HomeScreen(
             state = uiState,
-            earnedBadgeIds = earnedBadges,
             onStartWorkout = { navController.navigate(Routes.START) },
             onResumeWorkout = { navController.navigate(Routes.ACTIVE) },
             onOpenExercise = { navController.navigate(Routes.exerciseDetail(it)) },
             onSeeAllExercises = { navController.navigateTab(Routes.EXERCISES) },
         )
+    }
+    composable(Routes.BADGES) {
+        val earnedBadges by viewModel.earnedBadges.collectAsStateWithLifecycle()
+        BadgesScreen(earnedBadgeIds = earnedBadges)
     }
     composable(Routes.EXERCISES) {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
