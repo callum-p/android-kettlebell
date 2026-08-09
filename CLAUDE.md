@@ -37,19 +37,22 @@ fails the build). Put business logic in a form that can be unit-tested:
 
 ## Versioning & releases
 
-**To cut a release, run the `Release` workflow** (GitHub → Actions → Release → Run workflow) and
-enter the version (e.g. `1.4`) plus optional notes. It does everything else for you:
+**To cut a release, push a tag `v<version>`** (e.g. `git tag v1.4 && git push origin v1.4`). The
+`Release` workflow fires automatically and releases the current tip of the default branch as that
+version — no manual input, no hand-editing versions:
 
-1. Sets `appVersionName` to the version and derives `versionCode` from it
-   (`major*10000 + minor*100 + patch`, e.g. `1.4` → `10400`) in `app/build.gradle.kts`.
-2. Prepends a `## <version>` section to `CHANGELOG.md` (from your notes, or commit subjects since
-   the last tag if you leave notes blank).
-3. Commits that with `[skip ci]`, tags it `v<version>`, and pushes both to the branch.
+1. Reads the version from the tag (strips the `v`), sets `appVersionName`, and derives
+   `versionCode` from it (`major*10000 + minor*100 + patch`, e.g. `1.4` → `10400`).
+2. Updates `CHANGELOG.md`: if you already wrote a `## <version>` section it keeps it, otherwise it
+   prepends one from the commit subjects since the previous tag.
+3. Commits that with `[skip ci]` and pushes it to the default branch.
 4. Runs tests, builds the signed APK **from that commit**, and publishes the GitHub Release with
    the notes as the body and the APK attached.
 
-Because of this, **you should not bump `versionCode`/`versionName` or edit `CHANGELOG.md` by hand
-for a release** — the workflow owns it. Facts the workflow relies on (don't break them):
+So the normal release is just "tag the tip of `main`". The default branch should sit at the last
+released version between releases; **don't bump `versionCode`/`versionName` by hand** — the tag
+drives it. If you want curated notes instead of commit subjects, add the `## <version>` section to
+`CHANGELOG.md` before tagging. Facts the workflow relies on (don't break them):
 
 - `app/build.gradle.kts` has exactly one `versionCode = <int>` and one line
   `val appVersionName = "<x.y>"`. The app version shown in Settings reads `BuildConfig.VERSION_NAME`.

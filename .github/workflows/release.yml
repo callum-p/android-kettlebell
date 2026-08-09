@@ -1,103 +1,100 @@
 name: Release
 
-# Cut a release without touching version numbers by hand: run this workflow, enter the version
-# (e.g. 1.4), and it bumps versionCode/versionName + CHANGELOG.md, commits that with [skip ci],
-# tags it, builds the APK from that commit, and publishes the GitHub Release.
+# Push a tag like `v1.4` to cut a release — no manual input, no hand-editing versions.
+# The workflow releases the current tip of the default branch as that version: it derives
+# versionName/versionCode from the tag, updates CHANGELOG.md, commits that with [skip ci],
+# builds the APK from that commit, and publishes the GitHub Release with the APK attached.
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to release, e.g. 1.4 (no leading v)"
-        required: true
-      notes:
-        description: "Release notes, one per line (optional; defaults to commit subjects since the last tag)"
-        required: false
+  push:
+    tags: ["v*"]
 
 permissions:
   contents: write
 
 jobs:
   release:
-    name: Bump, build, and publish
+    name: Build and publish release
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout default branch
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Resolve and validate version
+      - name: Resolve version from tag
         id: v
         env:
-          RAW_VERSION: ${{ github.event.inputs.version }}
+          TAG_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          VERSION="${RAW_VERSION#v}"
+          VERSION="${TAG_NAME#v}"
           if ! echo "$VERSION" | grep -qE '^[0-9]+(\.[0-9]+)+$'; then
-            echo "::error::Invalid version '$VERSION' (expected e.g. 1.4)"; exit 1
-          fi
-          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-            echo "::error::Tag v$VERSION already exists"; exit 1
+            echo "::error::Tag '$TAG_NAME' -> version '$VERSION' is not a valid version (expected e.g. v1.4)"
+            exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Bump version and changelog
         env:
           VERSION: ${{ steps.v.outputs.version }}
-          NOTES: ${{ github.event.inputs.notes }}
+          TAG: ${{ steps.v.outputs.tag }}
         run: |
           set -euo pipefail
           GRADLE=app/build.gradle.kts
 
-          # Derive versionCode from the version itself (major*10000 + minor*100 + patch), so it is
-          # a deterministic function of the tag rather than a stateful +1. Stays monotonic as long
-          # as versions increase.
+          # versionCode is a deterministic function of the tag version (major*10000 + minor*100
+          # + patch), so v1.4 -> 10400. Stays monotonic as long as versions increase.
           IFS='.' read -r MAJOR MINOR PATCH _ <<< "$VERSION"
           NEW_CODE=$(( ${MAJOR:-0} * 10000 + ${MINOR:-0} * 100 + ${PATCH:-0} ))
           CURRENT_CODE=$(grep -oE 'versionCode = [0-9]+' "$GRADLE" | grep -oE '[0-9]+')
           if [ "$NEW_CODE" -le "$CURRENT_CODE" ]; then
-            echo "::error::versionCode $NEW_CODE (from $VERSION) is not greater than current $CURRENT_CODE — Android can't install a lower versionCode. Release a higher version."
+            echo "::error::versionCode $NEW_CODE (from $VERSION) is not greater than current $CURRENT_CODE — Android can't install a lower versionCode. Tag a higher version."
             exit 1
           fi
           sed -i -E "s/versionCode = [0-9]+/versionCode = ${NEW_CODE}/" "$GRADLE"
           sed -i "s/^val appVersionName = \".*\"/val appVersionName = \"${VERSION}\"/" "$GRADLE"
 
-          {
-            echo "## ${VERSION}"
-            if [ -n "$(printf '%s' "$NOTES" | tr -d '[:space:]')" ]; then
-              printf '%s\n' "$NOTES" | sed '/^[[:space:]]*$/d' | sed 's/^[[:space:]]*-\{0,1\}[[:space:]]*//' | sed 's/^/- /'
-            else
-              LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
-              if [ -n "$LAST_TAG" ]; then
-                git log "${LAST_TAG}..HEAD" --no-merges --pretty='- %s' | grep -v '\[skip ci\]' || echo "- Maintenance release"
+          # Update CHANGELOG.md unless this version's section was already written by hand.
+          if grep -qE "^## ${VERSION}( |\$)" CHANGELOG.md; then
+            echo "CHANGELOG already has a ## ${VERSION} section; keeping it."
+          else
+            PREV_TAG=$(git describe --tags --abbrev=0 --exclude "$TAG" HEAD 2>/dev/null || true)
+            {
+              echo "## ${VERSION}"
+              if [ -n "$PREV_TAG" ]; then
+                git log "${PREV_TAG}..HEAD" --no-merges --pretty='- %s' \
+                  | grep -vE '\[skip ci\]|^- Release ' || echo "- Maintenance release"
               else
-                echo "- Maintenance release"
+                git log --no-merges --pretty='- %s' \
+                  | grep -vE '\[skip ci\]|^- Release ' || echo "- Maintenance release"
               fi
-            fi
-            echo
-          } > /tmp/section.md
+              echo
+            } > /tmp/section.md
+            awk 'NR==1 && /^# / {print; print ""; while ((getline line < "/tmp/section.md") > 0) print line; close("/tmp/section.md"); next} {print}' CHANGELOG.md > /tmp/CHANGELOG.md
+            mv /tmp/CHANGELOG.md CHANGELOG.md
+          fi
 
-          awk 'NR==1 && /^# / {print; print ""; while ((getline line < "/tmp/section.md") > 0) print line; close("/tmp/section.md"); next} {print}' CHANGELOG.md > /tmp/CHANGELOG.md
-          mv /tmp/CHANGELOG.md CHANGELOG.md
+          echo "versionCode -> ${NEW_CODE}, versionName -> ${VERSION}"
 
-          echo "Bumped versionCode ${CURRENT_CODE} -> ${NEW_CODE}, versionName -> ${VERSION}"
-
-      - name: Commit, tag, and push
+      - name: Commit the release bump
         env:
-          TAG: ${{ steps.v.outputs.tag }}
           VERSION: ${{ steps.v.outputs.version }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add app/build.gradle.kts CHANGELOG.md
-          git commit -m "Release ${VERSION} [skip ci]"
-          git tag "$TAG"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
-          git push origin "$TAG"
+          if git diff --cached --quiet; then
+            echo "Nothing to commit (already at this version)."
+          else
+            git commit -m "Release ${VERSION} [skip ci]"
+            git push origin "HEAD:${DEFAULT_BRANCH}"
+          fi
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4

@@ -107,13 +107,18 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
   (`./gradlew testDebugUnitTest`) and then compiles the app on every push, uploading the debug
   APK as a workflow artifact (`kettlebell-debug-apk`), retained for **1 day**. A failing test
   fails the build.
-- The [`Release`](.github/workflows/release.yml) workflow cuts a release in one step — no manual
-  version edits. Run it from **Actions → Release → Run workflow**, enter the version (e.g. `1.4`)
-  and optional notes, and it:
-  1. bumps `versionCode` + `versionName` in `build.gradle.kts`,
-  2. prepends a `## <version>` section to [`CHANGELOG.md`](CHANGELOG.md) (from your notes, or
-     commit subjects since the last tag),
-  3. commits that with `[skip ci]`, tags `v<version>`, and pushes,
+- The [`Release`](.github/workflows/release.yml) workflow fires on a `v*` tag — no manual version
+  edits. Push a tag and it releases the current tip of `main` as that version:
+
+  ```bash
+  git tag v1.4 && git push origin v1.4
+  ```
+
+  1. reads the version from the tag, sets `versionName`, and derives `versionCode` from it
+     (`major*10000 + minor*100 + patch`),
+  2. updates [`CHANGELOG.md`](CHANGELOG.md) — keeps a hand-written `## <version>` section if present,
+     otherwise generates one from commit subjects since the previous tag,
+  3. commits that with `[skip ci]` and pushes it,
   4. builds the signed APK from that commit and publishes a **GitHub Release** with the notes and
      the APK attached (`kettlebell-v<version>.apk`).
 
