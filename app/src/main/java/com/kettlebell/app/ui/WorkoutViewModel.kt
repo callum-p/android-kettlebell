@@ -40,6 +40,7 @@ import com.kettlebell.app.ui.model.RestTimerState
 import com.kettlebell.app.ui.model.RoutineWithExercises
 import com.kettlebell.app.ui.model.SessionSummary
 import com.kettlebell.app.ui.model.WorkoutUiState
+import com.kettlebell.app.ui.theme.ThemeMode
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,6 +75,12 @@ class WorkoutViewModel(
     val reminderEnabled: StateFlow<Boolean> = settingsStore.reminderEnabled
     val reminderHour: StateFlow<Int> = settingsStore.reminderHour
     val reminderMinute: StateFlow<Int> = settingsStore.reminderMinute
+    val themeMode: StateFlow<ThemeMode> = settingsStore.themeMode
+    val dynamicColor: StateFlow<Boolean> = settingsStore.dynamicColor
+
+    fun setThemeMode(mode: ThemeMode) = settingsStore.setThemeMode(mode)
+
+    fun setDynamicColor(enabled: Boolean) = settingsStore.setDynamicColor(enabled)
 
     fun setWeightUnit(unit: WeightUnit) = settingsStore.setWeightUnit(unit)
 

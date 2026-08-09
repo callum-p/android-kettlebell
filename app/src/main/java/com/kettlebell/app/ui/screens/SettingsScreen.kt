@@ -1,6 +1,7 @@
 package com.kettlebell.app.ui.screens
 
 import android.content.Intent
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
@@ -66,6 +67,7 @@ import com.kettlebell.app.debug.AppLogger
 import com.kettlebell.app.debug.LogEntry
 import com.kettlebell.app.ui.WorkoutViewModel
 import com.kettlebell.app.ui.format.WeightUnit
+import com.kettlebell.app.ui.theme.ThemeMode
 import com.kettlebell.app.ui.format.formatDate
 import com.kettlebell.app.ui.format.formatTime
 import com.kettlebell.app.ui.format.formatWeight
@@ -81,6 +83,8 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
     val reminderEnabled by viewModel.reminderEnabled.collectAsStateWithLifecycle()
     val reminderHour by viewModel.reminderHour.collectAsStateWithLifecycle()
     val reminderMinute by viewModel.reminderMinute.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val dynamicColor by viewModel.dynamicColor.collectAsStateWithLifecycle()
 
     val signInLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -113,6 +117,15 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item { AboutCard() }
+
+            item {
+                AppearanceCard(
+                    themeMode = themeMode,
+                    dynamicColor = dynamicColor,
+                    onThemeMode = { viewModel.setThemeMode(it) },
+                    onDynamicColor = { viewModel.setDynamicColor(it) },
+                )
+            }
 
             item {
                 UnitsCard(
@@ -315,6 +328,66 @@ private fun UnitsCard(selected: WeightUnit, onSelect: (WeightUnit) -> Unit) {
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                         ),
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppearanceCard(
+    themeMode: ThemeMode,
+    dynamicColor: Boolean,
+    onThemeMode: (ThemeMode) -> Unit,
+    onDynamicColor: (Boolean) -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                text = "Appearance",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Choose light, dark, or follow the system.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ThemeMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = mode == themeMode,
+                        onClick = { onThemeMode(mode) },
+                        label = { Text(mode.label) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                    )
+                }
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = "Material You",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = "Tint the app from your wallpaper.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = dynamicColor, onCheckedChange = onDynamicColor)
                 }
             }
         }
