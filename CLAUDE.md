@@ -40,7 +40,8 @@ fails the build). Put business logic in a form that can be unit-tested:
 **To cut a release, run the `Release` workflow** (GitHub → Actions → Release → Run workflow) and
 enter the version (e.g. `1.4`) plus optional notes. It does everything else for you:
 
-1. Bumps `versionCode` by 1 and sets `appVersionName` to the version in `app/build.gradle.kts`.
+1. Sets `appVersionName` to the version and derives `versionCode` from it
+   (`major*10000 + minor*100 + patch`, e.g. `1.4` → `10400`) in `app/build.gradle.kts`.
 2. Prepends a `## <version>` section to `CHANGELOG.md` (from your notes, or commit subjects since
    the last tag if you leave notes blank).
 3. Commits that with `[skip ci]`, tags it `v<version>`, and pushes both to the branch.
@@ -52,8 +53,9 @@ for a release** — the workflow owns it. Facts the workflow relies on (don't br
 
 - `app/build.gradle.kts` has exactly one `versionCode = <int>` and one line
   `val appVersionName = "<x.y>"`. The app version shown in Settings reads `BuildConfig.VERSION_NAME`.
-- **The release tag is `v<versionName>`** and `versionCode` only ever increases (Android refuses to
-  install an APK whose `versionCode` is lower than the installed one).
+- **The release tag is `v<versionName>`**; `versionCode` is derived from the version and must keep
+  increasing (Android refuses to install an APK whose `versionCode` is lower than the installed
+  one) — the workflow fails the release if a version would produce a non-increasing code.
 - `CHANGELOG.md` starts with a `# Changelog` title; versions are `## <version>` sections, newest at
   the top, one `- ` bullet per line (don't wrap a bullet across lines). This single file drives:
   - the in-app **What's new** modal (current version's notes, via `BuildConfig.CHANGELOG`),

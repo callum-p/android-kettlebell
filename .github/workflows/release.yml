@@ -52,9 +52,17 @@ jobs:
           set -euo pipefail
           GRADLE=app/build.gradle.kts
 
+          # Derive versionCode from the version itself (major*10000 + minor*100 + patch), so it is
+          # a deterministic function of the tag rather than a stateful +1. Stays monotonic as long
+          # as versions increase.
+          IFS='.' read -r MAJOR MINOR PATCH _ <<< "$VERSION"
+          NEW_CODE=$(( ${MAJOR:-0} * 10000 + ${MINOR:-0} * 100 + ${PATCH:-0} ))
           CURRENT_CODE=$(grep -oE 'versionCode = [0-9]+' "$GRADLE" | grep -oE '[0-9]+')
-          NEW_CODE=$((CURRENT_CODE + 1))
-          sed -i "s/versionCode = ${CURRENT_CODE}/versionCode = ${NEW_CODE}/" "$GRADLE"
+          if [ "$NEW_CODE" -le "$CURRENT_CODE" ]; then
+            echo "::error::versionCode $NEW_CODE (from $VERSION) is not greater than current $CURRENT_CODE — Android can't install a lower versionCode. Release a higher version."
+            exit 1
+          fi
+          sed -i -E "s/versionCode = [0-9]+/versionCode = ${NEW_CODE}/" "$GRADLE"
           sed -i "s/^val appVersionName = \".*\"/val appVersionName = \"${VERSION}\"/" "$GRADLE"
 
           {
