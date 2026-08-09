@@ -1,12 +1,12 @@
 package com.kettlebell.app.ui.screens
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,6 +21,8 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,13 +40,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.kettlebell.app.progress.ExerciseBest
+import com.kettlebell.app.progress.Progress
+import com.kettlebell.app.progress.WeekVolume
+import com.kettlebell.app.ui.components.BarChart
 import com.kettlebell.app.ui.components.EmptyState
+import com.kettlebell.app.ui.components.FrequencyHeatmap
 import com.kettlebell.app.ui.format.LocalWeightUnit
+import com.kettlebell.app.ui.format.WeightUnit
 import com.kettlebell.app.ui.format.formatDate
 import com.kettlebell.app.ui.format.formatTime
 import com.kettlebell.app.ui.format.formatVolume
 import com.kettlebell.app.ui.format.formatWeight
 import com.kettlebell.app.ui.model.SessionSummary
+import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,13 +62,15 @@ fun HistoryScreen(
     onDelete: (SessionSummary) -> Unit,
 ) {
     var pendingDelete by remember { mutableStateOf<SessionSummary?>(null) }
+    var showOverview by remember { mutableStateOf(true) }
+    val unit = LocalWeightUnit.current
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
-                title = { Text("History") },
+                title = { Text("Progress") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                 ),
@@ -69,19 +80,31 @@ fun HistoryScreen(
         if (history.isEmpty()) {
             EmptyState(
                 title = "No workouts yet",
-                subtitle = "Finished workouts will show up here so you can track your progress.",
+                subtitle = "Finished workouts, charts and personal records will show up here.",
                 modifier = Modifier.fillMaxSize().padding(padding),
             )
             return@Scaffold
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(history, key = { it.session.id }) { summary ->
-                SessionCard(summary, onDelete = { pendingDelete = summary })
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TabChip("Overview", showOverview) { showOverview = true }
+                TabChip("Sessions", !showOverview) { showOverview = false }
+            }
+            if (showOverview) {
+                OverviewList(history, unit)
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(history, key = { it.session.id }) { summary ->
+                        SessionCard(summary, unit, onDelete = { pendingDelete = summary })
+                    }
+                }
             }
         }
     }
@@ -101,10 +124,144 @@ fun HistoryScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SessionCard(summary: SessionSummary, onDelete: () -> Unit) {
+private fun TabChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+    )
+}
+
+@Composable
+private fun OverviewList(history: List<SessionSummary>, unit: WeightUnit) {
+    val today = remember { LocalDate.now().toEpochDay() }
+    val weeks = remember(history) { Progress.weeklyVolume(history, today, 8) }
+    val activeDays = remember(history) { Progress.activeDays(history) }
+    val bests = remember(history) { Progress.bests(history) }
+
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item { WeeklyVolumeCard(weeks, unit) }
+        item { FrequencyCard(activeDays, today) }
+        item {
+            Text(
+                text = "Personal records",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        }
+        if (bests.isEmpty()) {
+            item {
+                Text(
+                    text = "Complete some sets to start setting records.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            items(bests, key = { it.exerciseId }) { best -> RecordRow(best, unit) }
+        }
+    }
+}
+
+@Composable
+private fun WeeklyVolumeCard(weeks: List<WeekVolume>, unit: WeightUnit) {
+    val thisWeek = weeks.lastOrNull()?.volumeKg ?: 0.0
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                text = "Weekly volume",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "This week: ${formatVolume(thisWeek, unit)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+            BarChart(
+                values = weeks.map { it.volumeKg.toFloat() },
+                labels = weeks.map {
+                    val d = LocalDate.ofEpochDay(it.weekStartEpochDay)
+                    "${d.dayOfMonth}/${d.monthValue}"
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun FrequencyCard(activeDays: Set<Long>, today: Long) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                text = "Activity",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Last 12 weeks",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+            FrequencyHeatmap(activeDays = activeDays, todayEpochDay = today, weeks = 12)
+        }
+    }
+}
+
+@Composable
+private fun RecordRow(best: ExerciseBest, unit: WeightUnit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = best.exerciseName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "Best: ${formatWeight(best.weightKg, unit)} × ${best.reps}  ·  ${formatDate(best.dateMillis)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = "~${formatWeight(best.oneRepMaxKg, unit)}\n1RM",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SessionCard(summary: SessionSummary, unit: WeightUnit, onDelete: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    val unit = LocalWeightUnit.current
 
     Surface(
         color = MaterialTheme.colorScheme.surface,

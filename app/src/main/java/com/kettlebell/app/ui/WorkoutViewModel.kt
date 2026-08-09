@@ -22,6 +22,8 @@ import com.kettlebell.app.data.db.WorkoutSession
 import com.kettlebell.app.data.db.WorkoutSet
 import com.kettlebell.app.debug.AppLogger
 import com.kettlebell.app.notify.RestNotifier
+import com.kettlebell.app.progress.ExerciseBest
+import com.kettlebell.app.progress.Progress
 import com.kettlebell.app.sync.DatabaseBackup
 import com.kettlebell.app.sync.DriveStatus
 import com.kettlebell.app.sync.DriveSync
@@ -102,12 +104,59 @@ class WorkoutViewModel(
     )
     val earnedBadges: StateFlow<Set<String>> = _earnedBadges.asStateFlow()
 
+    private val recordPrefs = appContext.getSharedPreferences("records", Context.MODE_PRIVATE)
+
     init {
-        // Watch for newly-earned badges and celebrate them.
+        // Watch for newly-earned badges and personal records and celebrate them.
         viewModelScope.launch {
-            uiState.collect { state -> if (!state.loading) checkForNewBadges(state.history) }
+            uiState.collect { state ->
+                if (!state.loading) {
+                    checkForNewBadges(state.history)
+                    checkForNewRecords(state.history)
+                }
+            }
         }
     }
+
+    private fun checkForNewRecords(history: List<com.kettlebell.app.ui.model.SessionSummary>) {
+        val bests = Progress.bests(history)
+        val editor = recordPrefs.edit()
+        if (!recordPrefs.contains(KEY_PR_SEEDED)) {
+            // Backfill existing bests silently so past lifts don't all fire as PRs.
+            bests.forEach { editor.putFloat(prKey(it.exerciseId), it.oneRepMaxKg.toFloat()) }
+            editor.putBoolean(KEY_PR_SEEDED, true).apply()
+            return
+        }
+        val newRecords = mutableListOf<ExerciseBest>()
+        for (best in bests) {
+            val previous = recordPrefs.getFloat(prKey(best.exerciseId), 0f)
+            if (best.oneRepMaxKg.toFloat() > previous + 0.01f) {
+                newRecords += best
+                editor.putFloat(prKey(best.exerciseId), best.oneRepMaxKg.toFloat())
+            }
+        }
+        editor.apply()
+        if (newRecords.isNotEmpty()) onRecordsSet(newRecords)
+    }
+
+    private fun onRecordsSet(records: List<ExerciseBest>) {
+        _celebrations.value += 1
+        val unit = weightUnit.value
+        _badgeBanner.value = if (records.size == 1) {
+            val r = records[0]
+            "New PR: ${r.exerciseName} — ${formatWeight(r.weightKg, unit)} × ${r.reps}"
+        } else {
+            "${records.size} new personal records! 🏆"
+        }
+        records.forEach {
+            RestNotifier.notifyPersonalRecord(
+                appContext,
+                "${it.exerciseName}: ${formatWeight(it.weightKg, unit)} × ${it.reps}",
+            )
+        }
+    }
+
+    private fun prKey(exerciseId: String) = "pr_$exerciseId"
 
     private fun checkForNewBadges(history: List<com.kettlebell.app.ui.model.SessionSummary>) {
         val qualifying = Badges.earnedIds(history)
@@ -439,6 +488,7 @@ class WorkoutViewModel(
 
     companion object {
         private const val KEY_ACK_BADGES = "acknowledged"
+        private const val KEY_PR_SEEDED = "pr_seeded"
 
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")

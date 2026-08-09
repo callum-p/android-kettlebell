@@ -19,6 +19,7 @@ object RestNotifier {
     private const val ACHIEVEMENT_CHANNEL_ID = "achievements"
     private const val NOTIFICATION_ID = 1001
     private const val BADGE_NOTIFICATION_ID = 1002
+    private const val PR_NOTIFICATION_ID = 1003
 
     /** Create the notification channels. Safe to call repeatedly. */
     fun ensureChannel(context: Context) {
@@ -45,19 +46,25 @@ object RestNotifier {
         }
     }
 
-    fun notifyBadge(context: Context, title: String) {
+    fun notifyBadge(context: Context, title: String) =
+        notifyAchievement(context, BADGE_NOTIFICATION_ID, "Badge unlocked! 🎉", title)
+
+    fun notifyPersonalRecord(context: Context, text: String) =
+        notifyAchievement(context, PR_NOTIFICATION_ID, "New personal record! 🏆", text)
+
+    private fun notifyAchievement(context: Context, id: Int, title: String, text: String) {
         if (!hasPermission(context)) return
         val notification = NotificationCompat.Builder(context, ACHIEVEMENT_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Badge unlocked! 🎉")
-            .setContentText(title)
+            .setContentTitle(title)
+            .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .build()
         runCatching {
-            NotificationManagerCompat.from(context).notify(BADGE_NOTIFICATION_ID, notification)
-        }.onFailure { AppLogger.e("RestNotifier", "Failed to post badge notification", it) }
+            NotificationManagerCompat.from(context).notify(id, notification)
+        }.onFailure { AppLogger.e("RestNotifier", "Failed to post notification", it) }
     }
 
     fun notifyRestComplete(context: Context, message: String) {

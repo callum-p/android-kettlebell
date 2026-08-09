@@ -53,9 +53,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kettlebell.app.data.Recommendation
 import com.kettlebell.app.data.db.Exercise
 import com.kettlebell.app.debug.AppLogger
+import com.kettlebell.app.progress.Progress
 import com.kettlebell.app.ui.WorkoutViewModel
 import com.kettlebell.app.ui.components.EmptyState
 import com.kettlebell.app.ui.components.LevelChip
+import com.kettlebell.app.ui.components.TrendLineChart
 import com.kettlebell.app.ui.format.LocalWeightUnit
 import com.kettlebell.app.ui.format.formatDate
 import com.kettlebell.app.ui.format.formatWeight
@@ -112,6 +114,11 @@ fun ExerciseDetailScreen(
             item { RecommendationCard(recommendation) }
             item { AboutCard(exercise) }
             item { HowToCard(exercise) }
+            val best = Progress.bestFor(uiState.history, exerciseId)
+            if (best != null) {
+                val trend = Progress.topWeightTrend(uiState.history, exerciseId)
+                item { BestTrendCard(best, trend, LocalWeightUnit.current) }
+            }
             item {
                 Text(
                     text = "Your history",
@@ -314,6 +321,43 @@ private fun HowToCard(exercise: Exercise) {
                         modifier = Modifier.weight(1f),
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BestTrendCard(
+    best: com.kettlebell.app.progress.ExerciseBest,
+    trend: List<Double>,
+    unit: com.kettlebell.app.ui.format.WeightUnit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                text = "Your best",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "${formatWeight(best.weightKg, unit)} × ${best.reps}  ·  ~${formatWeight(best.oneRepMaxKg, unit)} est. 1RM",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            if (trend.size >= 2) {
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = "Top weight over time",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                TrendLineChart(values = trend.map { it.toFloat() })
             }
         }
     }
