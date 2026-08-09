@@ -22,6 +22,7 @@ import com.kettlebell.app.data.db.SessionExercise
 import com.kettlebell.app.data.db.WorkoutSession
 import com.kettlebell.app.data.db.WorkoutSet
 import com.kettlebell.app.debug.AppLogger
+import com.kettlebell.app.notify.ReminderScheduler
 import com.kettlebell.app.notify.RestNotifier
 import com.kettlebell.app.progress.ExerciseBest
 import com.kettlebell.app.progress.Progress
@@ -70,9 +71,29 @@ class WorkoutViewModel(
     val weightUnit: StateFlow<WeightUnit> = settingsStore.weightUnit
     val ownedBells: StateFlow<List<Double>> = settingsStore.ownedBells
 
+    val reminderEnabled: StateFlow<Boolean> = settingsStore.reminderEnabled
+    val reminderHour: StateFlow<Int> = settingsStore.reminderHour
+    val reminderMinute: StateFlow<Int> = settingsStore.reminderMinute
+
     fun setWeightUnit(unit: WeightUnit) = settingsStore.setWeightUnit(unit)
 
     fun setOwnedBells(bells: Set<Double>) = settingsStore.setOwnedBells(bells)
+
+    fun setReminderEnabled(enabled: Boolean) {
+        settingsStore.setReminderEnabled(enabled)
+        if (enabled) {
+            ReminderScheduler.schedule(appContext, reminderHour.value, reminderMinute.value)
+        } else {
+            ReminderScheduler.cancel(appContext)
+        }
+    }
+
+    fun setReminderTime(hour: Int, minute: Int) {
+        settingsStore.setReminderTime(hour, minute)
+        if (reminderEnabled.value) {
+            ReminderScheduler.schedule(appContext, hour, minute)
+        }
+    }
 
     fun nextBellUp(weight: Double): Double =
         ProgressionEngine.nextBellAbove(weight, ownedBells.value)

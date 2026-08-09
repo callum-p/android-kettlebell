@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
@@ -42,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -76,6 +78,9 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
     val driveStatus by viewModel.driveStatus.collectAsStateWithLifecycle()
     val weightUnit by viewModel.weightUnit.collectAsStateWithLifecycle()
     val ownedBells by viewModel.ownedBells.collectAsStateWithLifecycle()
+    val reminderEnabled by viewModel.reminderEnabled.collectAsStateWithLifecycle()
+    val reminderHour by viewModel.reminderHour.collectAsStateWithLifecycle()
+    val reminderMinute by viewModel.reminderMinute.collectAsStateWithLifecycle()
 
     val signInLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -125,6 +130,16 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
                         if (!current.add(bell)) current.remove(bell)
                         viewModel.setOwnedBells(current)
                     },
+                )
+            }
+
+            item {
+                ReminderCard(
+                    enabled = reminderEnabled,
+                    hour = reminderHour,
+                    minute = reminderMinute,
+                    onToggle = { viewModel.setReminderEnabled(it) },
+                    onPickTime = { hour, minute -> viewModel.setReminderTime(hour, minute) },
                 )
             }
 
@@ -304,6 +319,73 @@ private fun UnitsCard(selected: WeightUnit, onSelect: (WeightUnit) -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun ReminderCard(
+    enabled: Boolean,
+    hour: Int,
+    minute: Int,
+    onToggle: (Boolean) -> Unit,
+    onPickTime: (Int, Int) -> Unit,
+) {
+    val context = LocalContext.current
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.Notifications,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = "Workout reminder",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "A daily nudge to train.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = enabled, onCheckedChange = onToggle)
+            }
+            if (enabled) {
+                Spacer(Modifier.height(14.dp))
+                OutlinedButton(
+                    onClick = {
+                        android.app.TimePickerDialog(
+                            context,
+                            { _, h, m -> onPickTime(h, m) },
+                            hour,
+                            minute,
+                            android.text.format.DateFormat.is24HourFormat(context),
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Remind me at ${formatTimeOfDay(hour, minute)}")
+                }
+            }
+        }
+    }
+}
+
+private fun formatTimeOfDay(hour: Int, minute: Int): String {
+    val period = if (hour < 12) "AM" else "PM"
+    val display = when {
+        hour == 0 -> 12
+        hour > 12 -> hour - 12
+        else -> hour
+    }
+    return "%d:%02d %s".format(display, minute, period)
 }
 
 @Composable

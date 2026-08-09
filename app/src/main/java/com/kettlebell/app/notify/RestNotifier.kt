@@ -17,9 +17,11 @@ object RestNotifier {
 
     private const val CHANNEL_ID = "rest_timer"
     private const val ACHIEVEMENT_CHANNEL_ID = "achievements"
+    private const val REMINDER_CHANNEL_ID = "reminders"
     private const val NOTIFICATION_ID = 1001
     private const val BADGE_NOTIFICATION_ID = 1002
     private const val PR_NOTIFICATION_ID = 1003
+    private const val REMINDER_NOTIFICATION_ID = 1004
 
     /** Create the notification channels. Safe to call repeatedly. */
     fun ensureChannel(context: Context) {
@@ -43,7 +45,32 @@ object RestNotifier {
                     enableLights(true)
                 },
             )
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    REMINDER_CHANNEL_ID,
+                    "Workout reminders",
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                ).apply {
+                    description = "Daily nudge to train"
+                    enableVibration(true)
+                },
+            )
         }
+    }
+
+    fun notifyReminder(context: Context) {
+        if (!hasPermission(context)) return
+        val notification = NotificationCompat.Builder(context, REMINDER_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Time to train 🏋️")
+            .setContentText("Your kettlebell is waiting — let's get a workout in.")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .build()
+        runCatching {
+            NotificationManagerCompat.from(context).notify(REMINDER_NOTIFICATION_ID, notification)
+        }.onFailure { AppLogger.e("RestNotifier", "Failed to post reminder", it) }
     }
 
     fun notifyBadge(context: Context, title: String) =
