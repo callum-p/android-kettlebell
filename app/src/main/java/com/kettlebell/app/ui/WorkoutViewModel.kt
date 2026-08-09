@@ -72,6 +72,10 @@ class WorkoutViewModel(
     val restTimer: StateFlow<RestTimerState?> = _restTimer.asStateFlow()
     private var restJob: Job? = null
 
+    /** Increments each time a workout is finished, so the UI can play a one-shot celebration. */
+    private val _celebrations = MutableStateFlow(0)
+    val celebrations: StateFlow<Int> = _celebrations.asStateFlow()
+
     // ------------------------------------------------------------------ Derived state
 
     private fun buildUiState(data: RawData): WorkoutUiState {
@@ -270,6 +274,7 @@ class WorkoutViewModel(
         val session = rawData.value.sessions.firstOrNull { it.finishedAt == null } ?: return@launchSafely
         repository.finishWorkout(session, System.currentTimeMillis())
         cancelRest()
+        _celebrations.value += 1
     }
 
     fun discardWorkout() = launchSafely("discardWorkout") {

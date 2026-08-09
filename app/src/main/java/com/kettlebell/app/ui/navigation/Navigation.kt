@@ -27,7 +27,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -42,6 +46,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.kettlebell.app.ui.WorkoutViewModel
+import com.kettlebell.app.ui.components.CelebrationOverlay
 import com.kettlebell.app.ui.format.formatClock
 import com.kettlebell.app.ui.model.RestTimerState
 import com.kettlebell.app.ui.screens.ActiveWorkoutScreen
@@ -51,6 +56,7 @@ import com.kettlebell.app.ui.screens.HistoryScreen
 import com.kettlebell.app.ui.screens.HomeScreen
 import com.kettlebell.app.ui.screens.SettingsScreen
 import com.kettlebell.app.ui.screens.StartWorkoutScreen
+import kotlinx.coroutines.delay
 
 object Routes {
     const val HOME = "home"
@@ -79,6 +85,16 @@ fun KettlebellRoot() {
     val viewModel: WorkoutViewModel = viewModel(factory = WorkoutViewModel.Factory)
     val navController = rememberNavController()
     val restTimer by viewModel.restTimer.collectAsStateWithLifecycle()
+
+    val celebrations by viewModel.celebrations.collectAsStateWithLifecycle()
+    var showCelebration by remember { mutableStateOf(false) }
+    LaunchedEffect(celebrations) {
+        if (celebrations > 0) {
+            showCelebration = true
+            delay(3000)
+            showCelebration = false
+        }
+    }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -112,6 +128,10 @@ fun KettlebellRoot() {
                     .padding(16.dp)
                     .padding(bottom = if (showBottomBar) 80.dp else 0.dp),
             )
+        }
+
+        if (showCelebration) {
+            CelebrationOverlay(modifier = Modifier.align(Alignment.Center))
         }
     }
 }
