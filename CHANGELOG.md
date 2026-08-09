@@ -1,8 +1,5 @@
 # Changelog
 
-## 1.4
-- Fixed: Settings now shows the correct app version
-
 ## 1.3
 - Fixed: your workouts are no longer lost when updating — data is now migrated, not reset
 - Shorter, cleaner shared workout summaries, now with a link to the app
