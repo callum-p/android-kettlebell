@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4
+- Guarantee the release bump lands on the default branch
+- Trigger releases automatically on tag push
+- Derive versionCode from the release version, not a +1
+- Reset main to 1.3 so the release workflow owns the next bump
+- Automate versioning in the release workflow
+- Show the real app version in Settings
+
+
 ## 1.3
 - Fixed: your workouts are no longer lost when updating — data is now migrated, not reset
 - Shorter, cleaner shared workout summaries, now with a link to the app
