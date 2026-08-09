@@ -96,6 +96,14 @@ fun KettlebellRoot() {
         }
     }
 
+    val badgeBanner by viewModel.badgeBanner.collectAsStateWithLifecycle()
+    LaunchedEffect(badgeBanner) {
+        if (badgeBanner != null) {
+            delay(3500)
+            viewModel.clearBadgeBanner()
+        }
+    }
+
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = currentRoute in tabs.map { it.route }
@@ -133,6 +141,33 @@ fun KettlebellRoot() {
         if (showCelebration) {
             CelebrationOverlay(modifier = Modifier.align(Alignment.Center))
         }
+
+        badgeBanner?.let { text ->
+            BadgeBanner(
+                text = text,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 48.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun BadgeBanner(text: String, modifier: Modifier = Modifier) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 8.dp,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+        )
     }
 }
 

@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.kettlebell.app.KettlebellApp
+import com.kettlebell.app.badges.Badge
+import com.kettlebell.app.badges.Badges
 import com.kettlebell.app.data.ExerciseCatalog
 import com.kettlebell.app.data.ProgressionEngine
 import com.kettlebell.app.data.Recommendation
@@ -79,9 +81,48 @@ class WorkoutViewModel(
     val restTimer: StateFlow<RestTimerState?> = _restTimer.asStateFlow()
     private var restJob: Job? = null
 
-    /** Increments each time a workout is finished, so the UI can play a one-shot celebration. */
+    /** Increments each time a celebration should play (finishing a workout or unlocking a badge). */
     private val _celebrations = MutableStateFlow(0)
     val celebrations: StateFlow<Int> = _celebrations.asStateFlow()
+
+    private val badgePrefs = appContext.getSharedPreferences("badges", Context.MODE_PRIVATE)
+    private val _badgeBanner = MutableStateFlow<String?>(null)
+    val badgeBanner: StateFlow<String?> = _badgeBanner.asStateFlow()
+
+    init {
+        // Watch for newly-earned badges and celebrate them.
+        viewModelScope.launch {
+            uiState.collect { state -> if (!state.loading) checkForNewBadges(state.history) }
+        }
+    }
+
+    private fun checkForNewBadges(history: List<com.kettlebell.app.ui.model.SessionSummary>) {
+        val earned = Badges.earnedIds(history)
+        if (!badgePrefs.contains(KEY_ACK_BADGES)) {
+            // First run with this feature — record current badges silently, don't celebrate history.
+            badgePrefs.edit().putStringSet(KEY_ACK_BADGES, earned).apply()
+            return
+        }
+        val acknowledged = badgePrefs.getStringSet(KEY_ACK_BADGES, emptySet()).orEmpty()
+        if (earned == acknowledged) return
+        badgePrefs.edit().putStringSet(KEY_ACK_BADGES, earned).apply()
+        val newlyEarned = Badges.all.filter { it.id in (earned - acknowledged) }
+        if (newlyEarned.isNotEmpty()) onBadgesUnlocked(newlyEarned)
+    }
+
+    private fun onBadgesUnlocked(newlyEarned: List<Badge>) {
+        _celebrations.value += 1
+        _badgeBanner.value = if (newlyEarned.size == 1) {
+            "Badge unlocked: ${newlyEarned[0].emoji} ${newlyEarned[0].title}"
+        } else {
+            "${newlyEarned.size} badges unlocked! 🎉"
+        }
+        newlyEarned.forEach { RestNotifier.notifyBadge(appContext, "${it.emoji} ${it.title}") }
+    }
+
+    fun clearBadgeBanner() {
+        _badgeBanner.value = null
+    }
 
     // ------------------------------------------------------------------ Derived state
 
@@ -377,6 +418,8 @@ class WorkoutViewModel(
     }
 
     companion object {
+        private const val KEY_ACK_BADGES = "acknowledged"
+
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {

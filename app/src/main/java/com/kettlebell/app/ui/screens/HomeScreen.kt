@@ -25,8 +25,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.kettlebell.app.badges.BadgeState
+import com.kettlebell.app.badges.Badges
 import com.kettlebell.app.data.db.Exercise
 import com.kettlebell.app.ui.components.ExerciseListItem
 import com.kettlebell.app.ui.components.SectionHeader
@@ -125,6 +129,83 @@ fun HomeScreen(
                 level = exercise.level,
                 subtitle = exercise.primaryMuscles,
                 onClick = { onOpenExercise(exercise.id) },
+            )
+        }
+
+        item {
+            val badges = remember(state.history) { Badges.evaluate(state.history) }
+            val earnedCount = badges.count { it.earned }
+            Column {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SectionHeader("Badges")
+                    Text(
+                        text = "$earnedCount / ${badges.size}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                badges.chunked(3).forEach { rowBadges ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        rowBadges.forEach { badgeState ->
+                            BadgeTile(badgeState, modifier = Modifier.weight(1f))
+                        }
+                        repeat(3 - rowBadges.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BadgeTile(state: BadgeState, modifier: Modifier = Modifier) {
+    val container = if (state.earned) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    }
+    Surface(
+        color = container,
+        shape = RoundedCornerShape(18.dp),
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 16.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = state.badge.emoji,
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.alpha(if (state.earned) 1f else 0.35f),
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = state.badge.title,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (state.earned) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (state.earned) "Earned" else state.badge.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 3,
             )
         }
     }

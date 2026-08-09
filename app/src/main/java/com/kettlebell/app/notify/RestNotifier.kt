@@ -16,23 +16,48 @@ import com.kettlebell.app.debug.AppLogger
 object RestNotifier {
 
     private const val CHANNEL_ID = "rest_timer"
+    private const val ACHIEVEMENT_CHANNEL_ID = "achievements"
     private const val NOTIFICATION_ID = 1001
+    private const val BADGE_NOTIFICATION_ID = 1002
 
-    /** Create the notification channel. Safe to call repeatedly. */
+    /** Create the notification channels. Safe to call repeatedly. */
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Rest timer",
-                NotificationManager.IMPORTANCE_HIGH,
-            ).apply {
-                description = "Alerts you when a rest period is over"
-                enableVibration(true)
-                enableLights(true)
-            }
-            context.getSystemService(NotificationManager::class.java)
-                ?.createNotificationChannel(channel)
+            val manager = context.getSystemService(NotificationManager::class.java) ?: return
+            manager.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "Rest timer", NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = "Alerts you when a rest period is over"
+                    enableVibration(true)
+                    enableLights(true)
+                },
+            )
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    ACHIEVEMENT_CHANNEL_ID,
+                    "Achievements",
+                    NotificationManager.IMPORTANCE_HIGH,
+                ).apply {
+                    description = "Celebrates badges you unlock"
+                    enableVibration(true)
+                    enableLights(true)
+                },
+            )
         }
+    }
+
+    fun notifyBadge(context: Context, title: String) {
+        if (!hasPermission(context)) return
+        val notification = NotificationCompat.Builder(context, ACHIEVEMENT_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Badge unlocked! 🎉")
+            .setContentText(title)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .build()
+        runCatching {
+            NotificationManagerCompat.from(context).notify(BADGE_NOTIFICATION_ID, notification)
+        }.onFailure { AppLogger.e("RestNotifier", "Failed to post badge notification", it) }
     }
 
     fun notifyRestComplete(context: Context, message: String) {
