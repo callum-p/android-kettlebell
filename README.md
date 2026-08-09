@@ -107,17 +107,19 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
   (`./gradlew testDebugUnitTest`) and then compiles the app on every push, uploading the debug
   APK as a workflow artifact (`kettlebell-debug-apk`), retained for **1 day**. A failing test
   fails the build.
-- The [`Release`](.github/workflows/release.yml) workflow runs when a `v*` tag is pushed. It
-  builds the signed APK, pulls that version's notes from [`CHANGELOG.md`](CHANGELOG.md), and
-  publishes a **GitHub Release** with those notes and the APK attached
-  (`kettlebell-v<version>.apk`). Cut a release with:
+- The [`Release`](.github/workflows/release.yml) workflow cuts a release in one step — no manual
+  version edits. Run it from **Actions → Release → Run workflow**, enter the version (e.g. `1.4`)
+  and optional notes, and it:
+  1. bumps `versionCode` + `versionName` in `build.gradle.kts`,
+  2. prepends a `## <version>` section to [`CHANGELOG.md`](CHANGELOG.md) (from your notes, or
+     commit subjects since the last tag),
+  3. commits that with `[skip ci]`, tags `v<version>`, and pushes,
+  4. builds the signed APK from that commit and publishes a **GitHub Release** with the notes and
+     the APK attached (`kettlebell-v<version>.apk`).
 
-  ```bash
-  git tag v1.3 && git push origin v1.3
-  ```
-
-The in-app **"What's new"** changelog is computed at build time from `CHANGELOG.md` and baked
-into `BuildConfig`, so the app, the GitHub Release, and the repo all tell the same story.
+The in-app **"What's new"** modal and the Settings **Release notes** viewer are computed at build
+time from `CHANGELOG.md` and baked into `BuildConfig`, so the app, the GitHub Release, and the repo
+always tell the same story.
 
 ## Google Drive sync setup (one-time)
 

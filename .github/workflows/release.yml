@@ -1,20 +1,24 @@
 name: Release
 
+# Cut a release without touching version numbers by hand: run this workflow, enter the version
+# (e.g. 1.4), and it bumps versionCode/versionName + CHANGELOG.md, commits that with [skip ci],
+# tags it, builds the APK from that commit, and publishes the GitHub Release.
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Tag to create and publish (e.g. v0.0.1). Created from the run's branch."
+      version:
+        description: "Version to release, e.g. 1.4 (no leading v)"
         required: true
+      notes:
+        description: "Release notes, one per line (optional; defaults to commit subjects since the last tag)"
+        required: false
 
 permissions:
   contents: write
 
 jobs:
   release:
-    name: Build and publish release
+    name: Bump, build, and publish
     runs-on: ubuntu-latest
 
     steps:
@@ -22,17 +26,70 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
-      - name: Resolve version
-        id: version
+      - name: Resolve and validate version
+        id: v
+        env:
+          RAW_VERSION: ${{ github.event.inputs.version }}
         run: |
-          if [ -n "${{ github.event.inputs.tag }}" ]; then
-            TAG="${{ github.event.inputs.tag }}"
-          else
-            TAG="${GITHUB_REF_NAME}"
+          set -euo pipefail
+          VERSION="${RAW_VERSION#v}"
+          if ! echo "$VERSION" | grep -qE '^[0-9]+(\.[0-9]+)+$'; then
+            echo "::error::Invalid version '$VERSION' (expected e.g. 1.4)"; exit 1
           fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "::error::Tag v$VERSION already exists"; exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version and changelog
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+          NOTES: ${{ github.event.inputs.notes }}
+        run: |
+          set -euo pipefail
+          GRADLE=app/build.gradle.kts
+
+          CURRENT_CODE=$(grep -oE 'versionCode = [0-9]+' "$GRADLE" | grep -oE '[0-9]+')
+          NEW_CODE=$((CURRENT_CODE + 1))
+          sed -i "s/versionCode = ${CURRENT_CODE}/versionCode = ${NEW_CODE}/" "$GRADLE"
+          sed -i "s/^val appVersionName = \".*\"/val appVersionName = \"${VERSION}\"/" "$GRADLE"
+
+          {
+            echo "## ${VERSION}"
+            if [ -n "$(printf '%s' "$NOTES" | tr -d '[:space:]')" ]; then
+              printf '%s\n' "$NOTES" | sed '/^[[:space:]]*$/d' | sed 's/^[[:space:]]*-\{0,1\}[[:space:]]*//' | sed 's/^/- /'
+            else
+              LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+              if [ -n "$LAST_TAG" ]; then
+                git log "${LAST_TAG}..HEAD" --no-merges --pretty='- %s' | grep -v '\[skip ci\]' || echo "- Maintenance release"
+              else
+                echo "- Maintenance release"
+              fi
+            fi
+            echo
+          } > /tmp/section.md
+
+          awk 'NR==1 && /^# / {print; print ""; while ((getline line < "/tmp/section.md") > 0) print line; close("/tmp/section.md"); next} {print}' CHANGELOG.md > /tmp/CHANGELOG.md
+          mv /tmp/CHANGELOG.md CHANGELOG.md
+
+          echo "Bumped versionCode ${CURRENT_CODE} -> ${NEW_CODE}, versionName -> ${VERSION}"
+
+      - name: Commit, tag, and push
+        env:
+          TAG: ${{ steps.v.outputs.tag }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/build.gradle.kts CHANGELOG.md
+          git commit -m "Release ${VERSION} [skip ci]"
+          git tag "$TAG"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "$TAG"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -56,30 +113,33 @@ jobs:
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Rename APK
+        env:
+          TAG: ${{ steps.v.outputs.tag }}
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/kettlebell-${{ steps.version.outputs.tag }}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/kettlebell-${TAG}.apk"
 
       - name: Extract release notes
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+          TAG: ${{ steps.v.outputs.tag }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          awk -v ver="## $VERSION" '
+          awk -v ver="## ${VERSION}" '
             $0 == ver { cap = 1; next }
             /^## / { if (cap) exit }
             cap { print }
           ' CHANGELOG.md > release_notes.md
           if [ ! -s release_notes.md ]; then
-            echo "Kettlebell ${{ steps.version.outputs.tag }}" > release_notes.md
+            echo "Kettlebell ${TAG}" > release_notes.md
           fi
           echo "----- release notes -----"
           cat release_notes.md
 
-      - name: Create GitHub release
+      - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          target_commitish: ${{ github.sha }}
-          name: Kettlebell ${{ steps.version.outputs.tag }}
+          tag_name: ${{ steps.v.outputs.tag }}
+          name: Kettlebell ${{ steps.v.outputs.tag }}
           body_path: release_notes.md
-          files: dist/kettlebell-${{ steps.version.outputs.tag }}.apk
+          files: dist/kettlebell-${{ steps.v.outputs.tag }}.apk
           fail_on_unmatched_files: true

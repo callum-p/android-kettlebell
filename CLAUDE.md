@@ -37,19 +37,29 @@ fails the build). Put business logic in a form that can be unit-tested:
 
 ## Versioning & releases
 
-- `app/build.gradle.kts` holds `appVersionName` (e.g. `"1.3"`) and `versionCode` (integer).
-- **Every release bumps `versionCode` by exactly 1** (Android refuses to install an APK whose
-  `versionCode` is lower than the installed one) and sets `appVersionName` to the new version.
-- **The release tag is `v<versionName>`** (e.g. `v1.3`). Keep them in lockstep.
-- **Add a `## <version>` section to `CHANGELOG.md`** for every release, newest at the top, with
-  one `- ` bullet per line (don't wrap a bullet across lines). This single file drives:
+**To cut a release, run the `Release` workflow** (GitHub → Actions → Release → Run workflow) and
+enter the version (e.g. `1.4`) plus optional notes. It does everything else for you:
+
+1. Bumps `versionCode` by 1 and sets `appVersionName` to the version in `app/build.gradle.kts`.
+2. Prepends a `## <version>` section to `CHANGELOG.md` (from your notes, or commit subjects since
+   the last tag if you leave notes blank).
+3. Commits that with `[skip ci]`, tags it `v<version>`, and pushes both to the branch.
+4. Runs tests, builds the signed APK **from that commit**, and publishes the GitHub Release with
+   the notes as the body and the APK attached.
+
+Because of this, **you should not bump `versionCode`/`versionName` or edit `CHANGELOG.md` by hand
+for a release** — the workflow owns it. Facts the workflow relies on (don't break them):
+
+- `app/build.gradle.kts` has exactly one `versionCode = <int>` and one line
+  `val appVersionName = "<x.y>"`. The app version shown in Settings reads `BuildConfig.VERSION_NAME`.
+- **The release tag is `v<versionName>`** and `versionCode` only ever increases (Android refuses to
+  install an APK whose `versionCode` is lower than the installed one).
+- `CHANGELOG.md` starts with a `# Changelog` title; versions are `## <version>` sections, newest at
+  the top, one `- ` bullet per line (don't wrap a bullet across lines). This single file drives:
   - the in-app **What's new** modal (current version's notes, via `BuildConfig.CHANGELOG`),
   - the Settings **Release notes** viewer (full history, via `BuildConfig.CHANGELOG_FULL`),
-  - the **GitHub Release** body (the release workflow extracts the tagged version's section).
-- The changelog is read **at build time** in `build.gradle.kts` — it is never hand-copied into
-  Kotlin. Update `CHANGELOG.md`, not code, to change release notes.
-- Releases are published by pushing a `v*` tag (or running the `Release` workflow manually),
-  which builds the signed APK and creates the GitHub Release with notes + APK attached.
+  - the **GitHub Release** body.
+- The changelog is read **at build time** in `build.gradle.kts` — never hand-copied into Kotlin.
 
 ## Database migrations — NEVER wipe user history
 
