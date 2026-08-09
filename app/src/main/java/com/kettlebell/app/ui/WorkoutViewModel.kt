@@ -41,6 +41,7 @@ import com.kettlebell.app.ui.model.RoutineWithExercises
 import com.kettlebell.app.ui.model.SessionSummary
 import com.kettlebell.app.ui.model.WorkoutUiState
 import com.kettlebell.app.ui.theme.ThemeMode
+import com.kettlebell.app.widget.KettlebellWidgetProvider
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -167,6 +168,11 @@ class WorkoutViewModel(
                 if (!state.loading) {
                     checkForNewBadges(state.history)
                     checkForNewRecords(state.history)
+                    KettlebellWidgetProvider.updateStats(
+                        appContext,
+                        totalWorkouts = state.stats.totalWorkouts,
+                        workoutsThisWeek = state.stats.workoutsThisWeek,
+                    )
                 }
             }
         }
