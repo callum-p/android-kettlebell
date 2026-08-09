@@ -167,10 +167,16 @@ app/src/main/java/com/kettlebell/app/
 ├── progress/        # Personal records, volume, and training-frequency analytics
 ├── share/           # Workout-summary share text
 ├── sync/            # Google Drive + local file backup
+├── update/          # In-app update checker (GitHub Releases) + installer
 ├── widget/          # Home-screen app widget
 ├── debug/           # In-app exception logger
 └── ui/              # Compose theme, navigation, screens, components, view model, what's-new
 ```
+
+## License
+
+Free to use under the [MIT License](LICENSE) — use, modify, and distribute it however you like;
+just keep the copyright and licence notice.
 
 ---
 
