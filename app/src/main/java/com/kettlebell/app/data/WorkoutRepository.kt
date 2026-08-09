@@ -5,6 +5,7 @@ import com.kettlebell.app.data.db.KettlebellDatabase
 import com.kettlebell.app.data.db.SessionExercise
 import com.kettlebell.app.data.db.WorkoutSession
 import com.kettlebell.app.data.db.WorkoutSet
+import com.kettlebell.app.debug.AppLogger
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -19,8 +20,11 @@ class WorkoutRepository(private val db: KettlebellDatabase) {
 
     /** Seed the built-in exercise library the first time the app runs. */
     suspend fun seedIfNeeded() {
-        if (db.exerciseDao().count() == 0) {
+        val existing = db.exerciseDao().count()
+        AppLogger.i("Seed", "exercises table has $existing rows")
+        if (existing == 0) {
             db.exerciseDao().insertAll(ExerciseCatalog.exercises)
+            AppLogger.i("Seed", "seeded ${ExerciseCatalog.exercises.size} exercises")
         }
     }
 

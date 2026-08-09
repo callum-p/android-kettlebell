@@ -56,7 +56,11 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
 
     val uiState: StateFlow<WorkoutUiState> = rawData
         .map(::buildUiState)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WorkoutUiState())
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            WorkoutUiState(exercises = ExerciseCatalog.exercises),
+        )
 
     private val _restTimer = MutableStateFlow<RestTimerState?>(null)
     val restTimer: StateFlow<RestTimerState?> = _restTimer.asStateFlow()
@@ -65,7 +69,9 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     // ------------------------------------------------------------------ Derived state
 
     private fun buildUiState(data: RawData): WorkoutUiState {
-        val exerciseById = data.exercises.associateBy { it.id }
+        // The exercise catalogue is static data, so it's the source of truth here — the UI never
+        // depends on an async database seed to display the library.
+        val exerciseById = ExerciseCatalog.exercises.associateBy { it.id }
         val setsByExercise = data.sets.groupBy { it.sessionExerciseId }
 
         fun activeWorkout(): ActiveWorkout? {
@@ -106,7 +112,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
 
         return WorkoutUiState(
             loading = !data.loaded,
-            exercises = data.exercises,
+            exercises = ExerciseCatalog.exercises,
             activeWorkout = activeWorkout(),
             history = history,
             stats = stats,
@@ -149,8 +155,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             }
     }
 
-    fun exerciseById(id: String): Exercise? =
-        rawData.value.exercises.firstOrNull { it.id == id } ?: ExerciseCatalog.byId(id)
+    fun exerciseById(id: String): Exercise? = ExerciseCatalog.byId(id)
 
     // ------------------------------------------------------------------ Mutations
 
