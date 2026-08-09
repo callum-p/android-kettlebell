@@ -13,12 +13,24 @@ android {
         applicationId = "com.kettlebell.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        // A committed, fixed debug keystore so every CI build is signed with the same key.
+        // Without this, GitHub's runners generate a random debug key per build and installing
+        // an update over a previous build fails with a signature mismatch.
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
