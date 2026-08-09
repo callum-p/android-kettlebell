@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7
+- Give clear feedback when a manual update check finds nothing
+
+
 ## 1.6
 - Sign from a CI secret; remove committed keystore
 - Show changelog prominently in the update dialog; clearer skip
