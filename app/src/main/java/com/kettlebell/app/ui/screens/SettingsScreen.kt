@@ -53,6 +53,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,6 +82,14 @@ import com.kettlebell.app.ui.format.formatWeight
 @Composable
 fun SettingsScreen(viewModel: WorkoutViewModel) {
     val context = LocalContext.current
+
+    // Surface manual update-check outcomes ("up to date" / "failed") as a toast.
+    LaunchedEffect(Unit) {
+        viewModel.updateCheckMessage.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val entries by AppLogger.entries.collectAsStateWithLifecycle()
     val driveStatus by viewModel.driveStatus.collectAsStateWithLifecycle()
     val weightUnit by viewModel.weightUnit.collectAsStateWithLifecycle()
@@ -134,7 +143,7 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
             item {
                 OutlinedButton(
                     onClick = {
-                        viewModel.checkForUpdate()
+                        viewModel.checkForUpdate(manual = true)
                         Toast.makeText(context, "Checking for updates…", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth(),

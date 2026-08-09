@@ -30,14 +30,24 @@ object UpdateChecker {
     private const val LATEST_URL =
         "https://api.github.com/repos/callum-p/android-kettlebell/releases/latest"
 
-    /** Returns a release newer than the installed build, or null (offline, up to date, or error). */
-    suspend fun check(currentCode: Int = BuildConfig.VERSION_CODE): ReleaseInfo? =
+    /** Outcome of an update check. */
+    sealed interface Result {
+        data class Available(val release: ReleaseInfo) : Result
+        object UpToDate : Result
+        object Failed : Result
+    }
+
+    /** Checks the latest release and reports whether an update is available, up to date, or failed. */
+    suspend fun check(currentCode: Int = BuildConfig.VERSION_CODE): Result =
         withContext(Dispatchers.IO) {
-            runCatching {
-                val body = httpGetText(LATEST_URL) ?: return@runCatching null
-                val release = parseLatest(body) ?: return@runCatching null
-                if (release.versionCode > currentCode) release else null
-            }.onFailure { AppLogger.e("UpdateChecker", "Update check failed", it) }.getOrNull()
+            try {
+                val body = httpGetText(LATEST_URL) ?: return@withContext Result.Failed
+                val release = parseLatest(body) ?: return@withContext Result.Failed
+                if (release.versionCode > currentCode) Result.Available(release) else Result.UpToDate
+            } catch (t: Throwable) {
+                AppLogger.e("UpdateChecker", "Update check failed", t)
+                Result.Failed
+            }
         }
 
     /** Parses the GitHub "latest release" JSON into a [ReleaseInfo]. Pure; unit-tested. */

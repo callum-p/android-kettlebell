@@ -46,9 +46,12 @@ import com.kettlebell.app.update.UpdateChecker
 import com.kettlebell.app.widget.KettlebellWidgetProvider
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -99,11 +102,26 @@ class WorkoutViewModel(
     private val _updateDownloading = MutableStateFlow(false)
     val updateDownloading: StateFlow<Boolean> = _updateDownloading.asStateFlow()
 
-    /** Check GitHub for a newer release; surfaces it via [availableUpdate] unless the user skipped it. */
-    fun checkForUpdate() = viewModelScope.launch {
-        val release = UpdateChecker.check() ?: return@launch
-        if (release.versionCode != settingsStore.skippedUpdateVersion()) {
-            _availableUpdate.value = release
+    /** One-shot messages for a manual update check (e.g. "You're on the latest version"). */
+    private val _updateCheckMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val updateCheckMessage: SharedFlow<String> = _updateCheckMessage.asSharedFlow()
+
+    /**
+     * Check GitHub for a newer release. A newer version is surfaced via [availableUpdate]. When
+     * [manual] (the user tapped "Check for updates"), the "up to date" / "failed" outcomes are
+     * reported via [updateCheckMessage] so the result is always visible, and a skipped version is
+     * shown anyway since the user explicitly asked.
+     */
+    fun checkForUpdate(manual: Boolean = false) = viewModelScope.launch {
+        when (val result = UpdateChecker.check()) {
+            is UpdateChecker.Result.Available -> {
+                val notSkipped = result.release.versionCode != settingsStore.skippedUpdateVersion()
+                if (manual || notSkipped) _availableUpdate.value = result.release
+            }
+            UpdateChecker.Result.UpToDate ->
+                if (manual) _updateCheckMessage.emit("You're on the latest version ✓")
+            UpdateChecker.Result.Failed ->
+                if (manual) _updateCheckMessage.emit("Couldn't check for updates — try again later")
         }
     }
 
