@@ -64,6 +64,7 @@ import com.kettlebell.app.ui.screens.HomeScreen
 import com.kettlebell.app.ui.screens.SettingsScreen
 import com.kettlebell.app.ui.screens.StartWorkoutScreen
 import com.kettlebell.app.ui.screens.TimedWorkoutScreen
+import com.kettlebell.app.ui.whatsnew.WhatsNewGate
 import kotlinx.coroutines.delay
 
 object Routes {
@@ -168,6 +169,8 @@ fun KettlebellRoot() {
                     .padding(top = 48.dp),
             )
         }
+
+        WhatsNewGate()
     }
     }
 }

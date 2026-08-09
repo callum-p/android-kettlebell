@@ -5,6 +5,33 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val appVersionName = "1.2"
+
+/**
+ * Extracts the release notes for [version] from the repo's CHANGELOG.md so the app can show a
+ * "What's new" modal after an update. Computed at build time — the notes are baked into
+ * BuildConfig, never hand-copied into Kotlin. Falls back to an empty string if the section
+ * is missing (e.g. a version that hasn't been documented yet).
+ */
+fun changelogFor(version: String): String {
+    val file = rootProject.file("CHANGELOG.md")
+    if (!file.exists()) return ""
+    val out = StringBuilder()
+    var capturing = false
+    for (line in file.readLines()) {
+        if (line.startsWith("## ")) {
+            if (capturing) break
+            capturing = line.removePrefix("## ").trim() == version
+            continue
+        }
+        if (capturing) out.appendLine(line)
+    }
+    return out.toString().trim()
+}
+
+fun String.escapeForBuildConfig(): String =
+    replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
+
 android {
     namespace = "com.kettlebell.app"
     compileSdk = 35
@@ -13,8 +40,10 @@ android {
         applicationId = "com.kettlebell.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = appVersionName
+
+        buildConfigField("String", "CHANGELOG", "\"${changelogFor(appVersionName).escapeForBuildConfig()}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -55,6 +84,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {
