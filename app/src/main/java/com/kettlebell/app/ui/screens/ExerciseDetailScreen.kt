@@ -56,6 +56,7 @@ import com.kettlebell.app.debug.AppLogger
 import com.kettlebell.app.ui.WorkoutViewModel
 import com.kettlebell.app.ui.components.EmptyState
 import com.kettlebell.app.ui.components.LevelChip
+import com.kettlebell.app.ui.format.LocalWeightUnit
 import com.kettlebell.app.ui.format.formatDate
 import com.kettlebell.app.ui.format.formatWeight
 import com.kettlebell.app.ui.model.ExerciseHistoryEntry
@@ -99,7 +100,7 @@ fun ExerciseDetailScreen(
             return@Scaffold
         }
 
-        val recommendation = viewModel.recommendationFor(exercise)
+        val recommendation = viewModel.recommendationFor(exercise, LocalWeightUnit.current)
         val history = viewModel.exerciseHistory(exerciseId)
 
         LazyColumn(
@@ -204,7 +205,7 @@ private fun RecommendationCard(recommendation: Recommendation) {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "${formatWeight(recommendation.weightKg)}  ·  ${recommendation.sets} × " +
+                text = "${formatWeight(recommendation.weightKg, LocalWeightUnit.current)}  ·  ${recommendation.sets} × " +
                     "${recommendation.repLow}–${recommendation.repHigh}",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -336,13 +337,13 @@ private fun HistoryRow(entry: ExerciseHistoryEntry) {
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = entry.sets.joinToString("   ") { "${formatWeight(it.weightKg)}×${it.reps}" },
+                    text = entry.sets.joinToString("   ") { "${formatWeight(it.weightKg, LocalWeightUnit.current)}×${it.reps}" },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Text(
-                text = "top ${formatWeight(entry.topWeightKg)}",
+                text = "top ${formatWeight(entry.topWeightKg, LocalWeightUnit.current)}",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )

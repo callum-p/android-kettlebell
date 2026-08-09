@@ -34,6 +34,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kettlebell.app.debug.AppLogger
 import com.kettlebell.app.debug.LogEntry
 import com.kettlebell.app.ui.WorkoutViewModel
+import com.kettlebell.app.ui.format.WeightUnit
 import com.kettlebell.app.ui.format.formatDate
 import com.kettlebell.app.ui.format.formatTime
 
@@ -69,6 +72,7 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
     val context = LocalContext.current
     val entries by AppLogger.entries.collectAsStateWithLifecycle()
     val driveStatus by viewModel.driveStatus.collectAsStateWithLifecycle()
+    val weightUnit by viewModel.weightUnit.collectAsStateWithLifecycle()
 
     val signInLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -101,6 +105,13 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item { AboutCard() }
+
+            item {
+                UnitsCard(
+                    selected = weightUnit,
+                    onSelect = { viewModel.setWeightUnit(it) },
+                )
+            }
 
             item {
                 DriveSyncCard(
@@ -194,6 +205,44 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
                 TextButton(onClick = { pendingRestoreUri = null }) { Text("Cancel") }
             },
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UnitsCard(selected: WeightUnit, onSelect: (WeightUnit) -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                text = "Units",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Show weights in kilograms or pounds.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                WeightUnit.entries.forEach { unit ->
+                    FilterChip(
+                        selected = unit == selected,
+                        onClick = { onSelect(unit) },
+                        label = { Text(unit.label) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                    )
+                }
+            }
+        }
     }
 }
 

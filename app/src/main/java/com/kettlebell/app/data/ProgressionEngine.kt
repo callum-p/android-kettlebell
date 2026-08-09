@@ -23,7 +23,11 @@ data class Recommendation(
  */
 object ProgressionEngine {
 
-    fun recommend(exercise: Exercise, lastSessionSets: List<WorkoutSet>): Recommendation {
+    fun recommend(
+        exercise: Exercise,
+        lastSessionSets: List<WorkoutSet>,
+        format: (Double) -> String = { defaultFormat(it) },
+    ): Recommendation {
         val completed = lastSessionSets.filter { it.completed }
         if (completed.isEmpty()) {
             return Recommendation(
@@ -101,6 +105,6 @@ object ProgressionEngine {
     fun snap(weight: Double): Double =
         ExerciseCatalog.BELLS.minByOrNull { kotlin.math.abs(it - weight) } ?: weight
 
-    private fun format(weight: Double): String =
+    private fun defaultFormat(weight: Double): String =
         if (weight % 1.0 == 0.0) "${weight.toInt()} kg" else "$weight kg"
 }

@@ -27,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +48,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.kettlebell.app.ui.WorkoutViewModel
 import com.kettlebell.app.ui.components.CelebrationOverlay
+import com.kettlebell.app.ui.format.LocalWeightUnit
 import com.kettlebell.app.ui.format.formatClock
 import com.kettlebell.app.ui.model.RestTimerState
 import com.kettlebell.app.ui.screens.ActiveWorkoutScreen
@@ -104,10 +106,13 @@ fun KettlebellRoot() {
         }
     }
 
+    val weightUnit by viewModel.weightUnit.collectAsStateWithLifecycle()
+
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = currentRoute in tabs.map { it.route }
 
+    CompositionLocalProvider(LocalWeightUnit provides weightUnit) {
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
@@ -152,6 +157,7 @@ fun KettlebellRoot() {
             )
         }
     }
+    }
 }
 
 @Composable
@@ -179,8 +185,10 @@ private fun NavGraphBuilder.appDestinations(
     // capturing it once at graph-construction time would leave every screen showing stale state.
     composable(Routes.HOME) {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        val earnedBadges by viewModel.earnedBadges.collectAsStateWithLifecycle()
         HomeScreen(
             state = uiState,
+            earnedBadgeIds = earnedBadges,
             onStartWorkout = { navController.navigate(Routes.START) },
             onResumeWorkout = { navController.navigate(Routes.ACTIVE) },
             onOpenExercise = { navController.navigate(Routes.exerciseDetail(it)) },

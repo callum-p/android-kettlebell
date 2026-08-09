@@ -12,6 +12,7 @@ import com.kettlebell.app.badges.Badges
 import com.kettlebell.app.data.ExerciseCatalog
 import com.kettlebell.app.data.ProgressionEngine
 import com.kettlebell.app.data.Recommendation
+import com.kettlebell.app.data.SettingsStore
 import com.kettlebell.app.data.WorkoutRepository
 import com.kettlebell.app.data.WorkoutTemplate
 import com.kettlebell.app.data.db.BodyPart
@@ -24,6 +25,8 @@ import com.kettlebell.app.notify.RestNotifier
 import com.kettlebell.app.sync.DatabaseBackup
 import com.kettlebell.app.sync.DriveStatus
 import com.kettlebell.app.sync.DriveSync
+import com.kettlebell.app.ui.format.WeightUnit
+import com.kettlebell.app.ui.format.formatWeight
 import com.kettlebell.app.ui.model.ActiveExercise
 import com.kettlebell.app.ui.model.ActiveWorkout
 import com.kettlebell.app.ui.model.CompletedExercise
@@ -56,9 +59,13 @@ class WorkoutViewModel(
     private val repository: WorkoutRepository,
     private val appContext: Context,
     private val driveSync: DriveSync,
+    private val settingsStore: SettingsStore,
 ) : ViewModel() {
 
     val driveStatus: StateFlow<DriveStatus> = driveSync.status
+    val weightUnit: StateFlow<WeightUnit> = settingsStore.weightUnit
+
+    fun setWeightUnit(unit: WeightUnit) = settingsStore.setWeightUnit(unit)
 
     private val rawData: StateFlow<RawData> = combine(
         repository.exercises,
@@ -89,6 +96,12 @@ class WorkoutViewModel(
     private val _badgeBanner = MutableStateFlow<String?>(null)
     val badgeBanner: StateFlow<String?> = _badgeBanner.asStateFlow()
 
+    /** Badges the user has earned. Sticky — once earned, a badge stays even if data is later removed. */
+    private val _earnedBadges = MutableStateFlow(
+        badgePrefs.getStringSet(KEY_ACK_BADGES, null)?.toSet() ?: emptySet(),
+    )
+    val earnedBadges: StateFlow<Set<String>> = _earnedBadges.asStateFlow()
+
     init {
         // Watch for newly-earned badges and celebrate them.
         viewModelScope.launch {
@@ -97,17 +110,21 @@ class WorkoutViewModel(
     }
 
     private fun checkForNewBadges(history: List<com.kettlebell.app.ui.model.SessionSummary>) {
-        val earned = Badges.earnedIds(history)
+        val qualifying = Badges.earnedIds(history)
         if (!badgePrefs.contains(KEY_ACK_BADGES)) {
-            // First run with this feature — record current badges silently, don't celebrate history.
-            badgePrefs.edit().putStringSet(KEY_ACK_BADGES, earned).apply()
+            // First run with this feature — backfill from existing DB content silently so past
+            // achievements are recorded without a storm of celebrations.
+            badgePrefs.edit().putStringSet(KEY_ACK_BADGES, qualifying).apply()
+            _earnedBadges.value = qualifying
             return
         }
-        val acknowledged = badgePrefs.getStringSet(KEY_ACK_BADGES, emptySet()).orEmpty()
-        if (earned == acknowledged) return
-        badgePrefs.edit().putStringSet(KEY_ACK_BADGES, earned).apply()
-        val newlyEarned = Badges.all.filter { it.id in (earned - acknowledged) }
-        if (newlyEarned.isNotEmpty()) onBadgesUnlocked(newlyEarned)
+        val union = _earnedBadges.value + qualifying
+        if (union.size != _earnedBadges.value.size) {
+            val newlyEarned = Badges.all.filter { it.id in (union - _earnedBadges.value) }
+            badgePrefs.edit().putStringSet(KEY_ACK_BADGES, union).apply()
+            _earnedBadges.value = union
+            if (newlyEarned.isNotEmpty()) onBadgesUnlocked(newlyEarned)
+        }
     }
 
     private fun onBadgesUnlocked(newlyEarned: List<Badge>) {
@@ -194,8 +211,11 @@ class WorkoutViewModel(
         return emptyList()
     }
 
-    fun recommendationFor(exercise: Exercise): Recommendation =
-        ProgressionEngine.recommend(exercise, lastSessionSets(exercise.id))
+    fun recommendationFor(
+        exercise: Exercise,
+        unit: WeightUnit = weightUnit.value,
+    ): Recommendation =
+        ProgressionEngine.recommend(exercise, lastSessionSets(exercise.id)) { formatWeight(it, unit) }
 
     fun exerciseHistory(exerciseId: String): List<ExerciseHistoryEntry> {
         val data = rawData.value
@@ -424,7 +444,12 @@ class WorkoutViewModel(
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                 val app = extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as KettlebellApp
-                return WorkoutViewModel(app.repository, app.applicationContext, app.driveSync) as T
+                return WorkoutViewModel(
+                    app.repository,
+                    app.applicationContext,
+                    app.driveSync,
+                    app.settingsStore,
+                ) as T
             }
         }
     }

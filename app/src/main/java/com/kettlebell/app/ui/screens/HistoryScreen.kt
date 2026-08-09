@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kettlebell.app.ui.components.EmptyState
+import com.kettlebell.app.ui.format.LocalWeightUnit
 import com.kettlebell.app.ui.format.formatDate
 import com.kettlebell.app.ui.format.formatTime
 import com.kettlebell.app.ui.format.formatVolume
@@ -142,7 +143,7 @@ private fun SessionCard(summary: SessionSummary, onDelete: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 Metric("${summary.completedSets}", "sets")
-                Metric(formatVolume(summary.totalVolumeKg), "volume")
+                Metric(formatVolume(summary.totalVolumeKg, LocalWeightUnit.current), "volume")
                 summary.durationMinutes?.let { Metric("${it}m", "duration") }
             }
 
@@ -160,7 +161,7 @@ private fun SessionCard(summary: SessionSummary, onDelete: () -> Unit) {
                             text = if (done.isEmpty()) {
                                 "No sets completed"
                             } else {
-                                done.joinToString("   ") { "${formatWeight(it.weightKg)}×${it.reps}" }
+                                done.joinToString("   ") { "${formatWeight(it.weightKg, LocalWeightUnit.current)}×${it.reps}" }
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

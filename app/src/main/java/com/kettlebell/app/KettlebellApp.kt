@@ -1,6 +1,7 @@
 package com.kettlebell.app
 
 import android.app.Application
+import com.kettlebell.app.data.SettingsStore
 import com.kettlebell.app.data.WorkoutRepository
 import com.kettlebell.app.data.db.KettlebellDatabase
 import com.kettlebell.app.debug.AppLogger
@@ -26,11 +27,15 @@ class KettlebellApp : Application() {
     lateinit var driveSync: DriveSync
         private set
 
+    lateinit var settingsStore: SettingsStore
+        private set
+
     override fun onCreate() {
         super.onCreate()
         AppLogger.init(this)
         RestNotifier.ensureChannel(this)
         driveSync = DriveSync(this)
+        settingsStore = SettingsStore(this)
         repository = WorkoutRepository(KettlebellDatabase.get(this), bootReady)
 
         applicationScope.launch {

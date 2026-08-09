@@ -35,18 +35,21 @@ import com.kettlebell.app.data.db.Exercise
 import com.kettlebell.app.ui.components.ExerciseListItem
 import com.kettlebell.app.ui.components.SectionHeader
 import com.kettlebell.app.ui.components.StatCard
+import com.kettlebell.app.ui.format.LocalWeightUnit
 import com.kettlebell.app.ui.format.formatVolume
 import com.kettlebell.app.ui.model.WorkoutUiState
 
 @Composable
 fun HomeScreen(
     state: WorkoutUiState,
+    earnedBadgeIds: Set<String>,
     onStartWorkout: () -> Unit,
     onResumeWorkout: () -> Unit,
     onOpenExercise: (String) -> Unit,
     onSeeAllExercises: () -> Unit,
 ) {
     val featured = remember(state.exercises) { state.exercises.take(4) }
+    val unit = LocalWeightUnit.current
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -100,7 +103,7 @@ fun HomeScreen(
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatCard(
-                    value = formatVolume(state.stats.totalVolumeKg),
+                    value = formatVolume(state.stats.totalVolumeKg, unit),
                     label = "Total volume",
                     modifier = Modifier.weight(1f),
                 )
@@ -133,7 +136,9 @@ fun HomeScreen(
         }
 
         item {
-            val badges = remember(state.history) { Badges.evaluate(state.history) }
+            val badges = remember(earnedBadgeIds) {
+                Badges.all.map { BadgeState(it, it.id in earnedBadgeIds) }
+            }
             val earnedCount = badges.count { it.earned }
             Column {
                 Spacer(Modifier.height(8.dp))

@@ -57,6 +57,7 @@ import com.kettlebell.app.ui.WorkoutViewModel
 import com.kettlebell.app.ui.components.EmptyState
 import com.kettlebell.app.ui.components.LevelChip
 import com.kettlebell.app.ui.components.Stepper
+import com.kettlebell.app.ui.format.LocalWeightUnit
 import com.kettlebell.app.ui.format.formatVolume
 import com.kettlebell.app.ui.format.formatWeight
 import com.kettlebell.app.ui.model.ActiveExercise
@@ -170,7 +171,7 @@ private fun WorkoutSummary(workout: ActiveWorkout) {
         Row(Modifier.padding(20.dp)) {
             SummaryStat("${workout.completedSets}/${workout.totalSets}", "Sets done", Modifier.weight(1f))
             SummaryStat(workout.exercises.size.toString(), "Exercises", Modifier.weight(1f))
-            SummaryStat(formatVolume(workout.totalVolumeKg), "Volume", Modifier.weight(1f))
+            SummaryStat(formatVolume(workout.totalVolumeKg, LocalWeightUnit.current), "Volume", Modifier.weight(1f))
         }
     }
 }
@@ -294,7 +295,7 @@ private fun ExerciseCard(
                     text = if (completed.isEmpty()) {
                         "${active.sets.size} sets · tap to expand"
                     } else {
-                        completed.joinToString("   ") { "${formatWeight(it.weightKg)}×${it.reps}" }
+                        completed.joinToString("   ") { "${formatWeight(it.weightKg, LocalWeightUnit.current)}×${it.reps}" }
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -351,7 +352,7 @@ private fun SetRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Stepper(
-                    value = formatWeight(set.weightKg),
+                    value = formatWeight(set.weightKg, LocalWeightUnit.current),
                     label = "Weight",
                     onDecrement = onWeightDown,
                     onIncrement = onWeightUp,
