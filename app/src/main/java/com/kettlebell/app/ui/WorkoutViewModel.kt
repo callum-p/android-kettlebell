@@ -1,5 +1,6 @@
 package com.kettlebell.app.ui
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -16,6 +17,7 @@ import com.kettlebell.app.data.db.SessionExercise
 import com.kettlebell.app.data.db.WorkoutSession
 import com.kettlebell.app.data.db.WorkoutSet
 import com.kettlebell.app.debug.AppLogger
+import com.kettlebell.app.notify.RestNotifier
 import com.kettlebell.app.ui.model.ActiveExercise
 import com.kettlebell.app.ui.model.ActiveWorkout
 import com.kettlebell.app.ui.model.CompletedExercise
@@ -44,7 +46,10 @@ private data class RawData(
     val loaded: Boolean = false,
 )
 
-class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() {
+class WorkoutViewModel(
+    private val repository: WorkoutRepository,
+    private val appContext: Context,
+) : ViewModel() {
 
     private val rawData: StateFlow<RawData> = combine(
         repository.exercises,
@@ -282,6 +287,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     fun startRest(seconds: Int, exerciseName: String) {
         if (seconds <= 0) return
         restJob?.cancel()
+        RestNotifier.cancel(appContext)
         _restTimer.value = RestTimerState(seconds, seconds, exerciseName)
         restJob = viewModelScope.launch {
             var remaining = seconds
@@ -291,6 +297,14 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
                 val current = _restTimer.value ?: break
                 _restTimer.value = current.copy(remainingSeconds = remaining)
             }
+            // Only reached on natural completion — a skip cancels this coroutine before here.
+            val finishedName = _restTimer.value?.exerciseName
+            val message = if (finishedName.isNullOrBlank()) {
+                "Workout complete!"
+            } else {
+                "Ready for $finishedName"
+            }
+            RestNotifier.notifyRestComplete(appContext, message)
         }
     }
 
@@ -307,6 +321,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         restJob?.cancel()
         restJob = null
         _restTimer.value = null
+        RestNotifier.cancel(appContext)
     }
 
     companion object {
@@ -314,7 +329,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                 val app = extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as KettlebellApp
-                return WorkoutViewModel(app.repository) as T
+                return WorkoutViewModel(app.repository, app.applicationContext) as T
             }
         }
     }

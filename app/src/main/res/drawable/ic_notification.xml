@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+    <!-- Simple kettlebell glyph; the system masks it to a solid colour for the status bar. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M9.2,7.2 C9.2,4.8 10.2,3.8 12,3.8 C13.8,3.8 14.8,4.8 14.8,7.2 L13,7.2 C13,5.9 12.7,5.6 12,5.6 C11.3,5.6 11,5.9 11,7.2 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,7.5 C15.6,7.5 18,10.5 18,14.2 C18,17.6 15.6,20 12,20 C8.4,20 6,17.6 6,14.2 C6,10.5 8.4,7.5 12,7.5 Z M12,11 A2,2 0 1,0 12,15 A2,2 0 1,0 12,11 Z" />
