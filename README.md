@@ -4,7 +4,7 @@
 [![Build APK](https://github.com/callum-p/android-kettlebell/actions/workflows/build-apk.yml/badge.svg)](https://github.com/callum-p/android-kettlebell/actions/workflows/build-apk.yml)
 
 <!-- LATEST_RELEASE -->
-📦 **[Latest release &amp; APK download](https://github.com/callum-p/android-kettlebell/releases/latest)** · [Changelog](CHANGELOG.md)
+📦 **Latest release: [v1.4](CHANGELOG.md)** — [Download the APK](https://github.com/callum-p/android-kettlebell/releases/download/v1.4/kettlebell-v1.4.apk)
 <!-- /LATEST_RELEASE -->
 
 **Your entire kettlebell training system, in one beautiful offline app.**
