@@ -38,5 +38,11 @@ abstract class KettlebellDatabase : RoomDatabase() {
                     .build()
                     .also { instance = it }
             }
+
+        /** Close and forget the singleton so the underlying file can be safely replaced. */
+        fun closeInstance() = synchronized(this) {
+            instance?.close()
+            instance = null
+        }
     }
 }

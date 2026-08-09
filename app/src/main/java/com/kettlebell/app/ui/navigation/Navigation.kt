@@ -167,7 +167,7 @@ private fun NavGraphBuilder.appDestinations(
         )
     }
     composable(Routes.SETTINGS) {
-        SettingsScreen()
+        SettingsScreen(viewModel = viewModel)
     }
     composable(Routes.START) {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()

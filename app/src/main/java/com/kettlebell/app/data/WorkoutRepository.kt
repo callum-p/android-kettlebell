@@ -1,31 +1,59 @@
 package com.kettlebell.app.data
 
+import androidx.sqlite.db.SimpleSQLiteQuery
 import com.kettlebell.app.data.db.Exercise
 import com.kettlebell.app.data.db.KettlebellDatabase
 import com.kettlebell.app.data.db.SessionExercise
 import com.kettlebell.app.data.db.WorkoutSession
 import com.kettlebell.app.data.db.WorkoutSet
 import com.kettlebell.app.debug.AppLogger
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
-/** Single entry point the UI uses to read and mutate workout data. */
-class WorkoutRepository(private val db: KettlebellDatabase) {
+/**
+ * Single entry point the UI uses to read and mutate workout data.
+ *
+ * All reads are gated on [bootReady] so that a Google Drive restore (which overwrites the database
+ * file on launch) completes before Room ever opens the database.
+ */
+class WorkoutRepository(
+    private val db: KettlebellDatabase,
+    private val bootReady: Deferred<Unit>,
+) {
 
-    val exercises: Flow<List<Exercise>> = db.exerciseDao().observeAll()
-    val sessions: Flow<List<WorkoutSession>> = db.sessionDao().observeAll()
-    val activeSession: Flow<WorkoutSession?> = db.sessionDao().observeActive()
-    val sessionExercises: Flow<List<SessionExercise>> = db.sessionExerciseDao().observeAll()
-    val sets: Flow<List<WorkoutSet>> = db.workoutSetDao().observeAll()
+    val exercises: Flow<List<Exercise>> = gated { db.exerciseDao().observeAll() }
+    val sessions: Flow<List<WorkoutSession>> = gated { db.sessionDao().observeAll() }
+    val activeSession: Flow<WorkoutSession?> = gated { db.sessionDao().observeActive() }
+    val sessionExercises: Flow<List<SessionExercise>> = gated { db.sessionExerciseDao().observeAll() }
+    val sets: Flow<List<WorkoutSet>> = gated { db.workoutSetDao().observeAll() }
+
+    private fun <T> gated(source: () -> Flow<T>): Flow<T> = flow {
+        bootReady.await()
+        emitAll(source())
+    }
 
     /** Seed the built-in exercise library the first time the app runs. */
     suspend fun seedIfNeeded() {
+        bootReady.await()
         val existing = db.exerciseDao().count()
         AppLogger.i("Seed", "exercises table has $existing rows")
         if (existing == 0) {
             db.exerciseDao().insertAll(ExerciseCatalog.exercises)
             AppLogger.i("Seed", "seeded ${ExerciseCatalog.exercises.size} exercises")
         }
+    }
+
+    /** Flush the write-ahead log into the main database file so a file-level backup is consistent. */
+    suspend fun checkpoint() = withContext(Dispatchers.IO) {
+        runCatching {
+            db.query(SimpleSQLiteQuery("PRAGMA wal_checkpoint(TRUNCATE)")).use { it.moveToFirst() }
+        }.onFailure { AppLogger.e("WorkoutRepository", "Checkpoint failed", it) }
+        Unit
     }
 
     suspend fun startWorkout(title: String, now: Long): Long {

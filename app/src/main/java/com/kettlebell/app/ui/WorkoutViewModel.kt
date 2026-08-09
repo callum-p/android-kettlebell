@@ -1,6 +1,7 @@
 package com.kettlebell.app.ui
 
 import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -18,6 +19,9 @@ import com.kettlebell.app.data.db.WorkoutSession
 import com.kettlebell.app.data.db.WorkoutSet
 import com.kettlebell.app.debug.AppLogger
 import com.kettlebell.app.notify.RestNotifier
+import com.kettlebell.app.sync.DatabaseBackup
+import com.kettlebell.app.sync.DriveStatus
+import com.kettlebell.app.sync.DriveSync
 import com.kettlebell.app.ui.model.ActiveExercise
 import com.kettlebell.app.ui.model.ActiveWorkout
 import com.kettlebell.app.ui.model.CompletedExercise
@@ -49,7 +53,10 @@ private data class RawData(
 class WorkoutViewModel(
     private val repository: WorkoutRepository,
     private val appContext: Context,
+    private val driveSync: DriveSync,
 ) : ViewModel() {
+
+    val driveStatus: StateFlow<DriveStatus> = driveSync.status
 
     private val rawData: StateFlow<RawData> = combine(
         repository.exercises,
@@ -275,6 +282,46 @@ class WorkoutViewModel(
         repository.finishWorkout(session, System.currentTimeMillis())
         cancelRest()
         _celebrations.value += 1
+        if (driveSync.isConnected()) {
+            repository.checkpoint()
+            driveSync.backup()
+        }
+    }
+
+    // ------------------------------------------------------------------ Google Drive sync
+
+    fun driveSignInIntent(): Intent = driveSync.signInIntent()
+
+    fun onDriveSignInResult(data: Intent?) {
+        val granted = driveSync.handleSignInResult(data)
+        if (granted) {
+            // Seed the remote copy with the current database immediately after connecting.
+            launchSafely("driveInitialBackup") {
+                repository.checkpoint()
+                driveSync.backup()
+            }
+        }
+    }
+
+    fun disconnectDrive() = driveSync.disconnect()
+
+    fun syncToDriveNow() = launchSafely("syncToDrive") {
+        repository.checkpoint()
+        driveSync.backup()
+    }
+
+    // ------------------------------------------------------------------ Local file backup
+
+    fun exportBackup(uri: android.net.Uri) = launchSafely("exportBackup") {
+        repository.checkpoint()
+        DatabaseBackup.copyDatabaseToUri(appContext, uri)
+    }
+
+    /** Overwrites the local database from [uri] and restarts the app so Room reopens the new file. */
+    fun importBackup(uri: android.net.Uri) = launchSafely("importBackup") {
+        if (DatabaseBackup.importDatabaseFromUri(appContext, uri)) {
+            DatabaseBackup.restartApp(appContext)
+        }
     }
 
     fun discardWorkout() = launchSafely("discardWorkout") {
@@ -334,7 +381,7 @@ class WorkoutViewModel(
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                 val app = extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as KettlebellApp
-                return WorkoutViewModel(app.repository, app.applicationContext) as T
+                return WorkoutViewModel(app.repository, app.applicationContext, app.driveSync) as T
             }
         }
     }

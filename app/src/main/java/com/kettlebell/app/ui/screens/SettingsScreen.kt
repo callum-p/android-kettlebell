@@ -1,10 +1,11 @@
 package com.kettlebell.app.ui.screens
 
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,12 +23,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,16 +59,33 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kettlebell.app.debug.AppLogger
 import com.kettlebell.app.debug.LogEntry
+import com.kettlebell.app.ui.WorkoutViewModel
+import com.kettlebell.app.ui.format.formatDate
+import com.kettlebell.app.ui.format.formatTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(viewModel: WorkoutViewModel) {
     val context = LocalContext.current
     val entries by AppLogger.entries.collectAsStateWithLifecycle()
+    val driveStatus by viewModel.driveStatus.collectAsStateWithLifecycle()
+
+    val signInLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result -> viewModel.onDriveSignInResult(result.data) }
+
+    val createBackupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream"),
+    ) { uri -> uri?.let { viewModel.exportBackup(it) } }
+
+    var pendingRestoreUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    val openBackupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> pendingRestoreUri = uri }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets(0),
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0),
         topBar = {
             TopAppBar(
                 title = { Text("Settings") },
@@ -74,6 +101,22 @@ fun SettingsScreen() {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item { AboutCard() }
+
+            item {
+                DriveSyncCard(
+                    status = driveStatus,
+                    onConnect = { signInLauncher.launch(viewModel.driveSignInIntent()) },
+                    onDisconnect = { viewModel.disconnectDrive() },
+                    onSyncNow = { viewModel.syncToDriveNow() },
+                )
+            }
+
+            item {
+                LocalBackupCard(
+                    onExport = { createBackupLauncher.launch("kettlebell-backup.db") },
+                    onImport = { openBackupLauncher.launch(arrayOf("*/*")) },
+                )
+            }
 
             item {
                 Row(
@@ -130,6 +173,147 @@ fun SettingsScreen() {
             }
         }
     }
+
+    pendingRestoreUri?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingRestoreUri = null },
+            title = { Text("Restore from backup?") },
+            text = {
+                Text(
+                    "This replaces all current workouts with the contents of the chosen file " +
+                        "and restarts the app. This can't be undone.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.importBackup(uri)
+                    pendingRestoreUri = null
+                }) { Text("Restore & restart") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRestoreUri = null }) { Text("Cancel") }
+            },
+        )
+    }
+}
+
+@Composable
+private fun DriveSyncCard(
+    status: com.kettlebell.app.sync.DriveStatus,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit,
+    onSyncNow: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (status.connected) Icons.Filled.CloudDone else Icons.Filled.CloudOff,
+                    contentDescription = null,
+                    tint = if (status.connected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = "Google Drive sync",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = when {
+                            status.connected && status.email != null -> "Connected · ${status.email}"
+                            status.connected -> "Connected"
+                            else -> "Back up automatically to your Drive"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (status.syncing) {
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                }
+            }
+
+            status.lastSyncMillis?.let { millis ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Last synced ${formatDate(millis)} at ${formatTime(millis)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            status.lastError?.let { error ->
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+
+            Spacer(Modifier.height(14.dp))
+            if (status.connected) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(onClick = onSyncNow, enabled = !status.syncing) { Text("Back up now") }
+                    OutlinedButton(onClick = onDisconnect) { Text("Disconnect") }
+                }
+            } else {
+                Button(onClick = onConnect, modifier = Modifier.fillMaxWidth()) {
+                    Text("Connect Google Drive")
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "When connected, your data backs up after every workout and restores on launch.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LocalBackupCard(onExport: () -> Unit, onImport: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                text = "Local backup",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Save a backup file anywhere on your device, or restore from one you've saved.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                FilledTonalButton(onClick = onExport, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.Upload, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Save backup")
+                }
+                FilledTonalButton(onClick = onImport, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Restore")
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -152,7 +336,7 @@ private fun AboutCard() {
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "All your workouts are stored privately on this device.",
+                text = "Your workouts are stored privately on this device.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
