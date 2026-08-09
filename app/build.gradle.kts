@@ -29,6 +29,16 @@ fun changelogFor(version: String): String {
     return out.toString().trim()
 }
 
+/** The full CHANGELOG.md (all versions), dropping the leading "# Changelog" title/preamble. */
+fun fullChangelog(): String {
+    val file = rootProject.file("CHANGELOG.md")
+    if (!file.exists()) return ""
+    return file.readLines()
+        .dropWhile { !it.startsWith("## ") }
+        .joinToString("\n")
+        .trim()
+}
+
 fun String.escapeForBuildConfig(): String =
     replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
 
@@ -44,6 +54,7 @@ android {
         versionName = appVersionName
 
         buildConfigField("String", "CHANGELOG", "\"${changelogFor(appVersionName).escapeForBuildConfig()}\"")
+        buildConfigField("String", "CHANGELOG_FULL", "\"${fullChangelog().escapeForBuildConfig()}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

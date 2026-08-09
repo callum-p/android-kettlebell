@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -68,6 +70,7 @@ import com.kettlebell.app.debug.LogEntry
 import com.kettlebell.app.ui.WorkoutViewModel
 import com.kettlebell.app.ui.format.WeightUnit
 import com.kettlebell.app.ui.theme.ThemeMode
+import com.kettlebell.app.ui.whatsnew.ReleaseNotes
 import com.kettlebell.app.ui.format.formatDate
 import com.kettlebell.app.ui.format.formatTime
 import com.kettlebell.app.ui.format.formatWeight
@@ -94,6 +97,7 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
         ActivityResultContracts.CreateDocument("application/octet-stream"),
     ) { uri -> uri?.let { viewModel.exportBackup(it) } }
 
+    var showReleaseNotes by remember { mutableStateOf(false) }
     var pendingRestoreUri by remember { mutableStateOf<android.net.Uri?>(null) }
     val openBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -117,6 +121,13 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item { AboutCard() }
+
+            item {
+                OutlinedButton(
+                    onClick = { showReleaseNotes = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Release notes") }
+            }
 
             item {
                 AppearanceCard(
@@ -228,6 +239,10 @@ fun SettingsScreen(viewModel: WorkoutViewModel) {
         }
     }
 
+    if (showReleaseNotes) {
+        ReleaseNotesDialog(onDismiss = { showReleaseNotes = false })
+    }
+
     pendingRestoreUri?.let { uri ->
         AlertDialog(
             onDismissRequest = { pendingRestoreUri = null },
@@ -332,6 +347,57 @@ private fun UnitsCard(selected: WeightUnit, onSelect: (WeightUnit) -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun ReleaseNotesDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Release notes") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 460.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                val versions = ReleaseNotes.versions
+                if (versions.isEmpty()) {
+                    Text(
+                        text = "No release notes available.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                versions.forEachIndexed { index, version ->
+                    if (index > 0) Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "Version ${version.version}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    version.entries.forEach { entry ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "•",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                text = entry,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        },
+    )
 }
 
 @Composable
