@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,6 +66,7 @@ fun ActiveWorkoutScreen(
     viewModel: WorkoutViewModel,
     activeWorkout: ActiveWorkout?,
     onAddExercise: () -> Unit,
+    onOpenExercise: (String) -> Unit,
     onFinish: () -> Unit,
     onDiscard: () -> Unit,
     onBack: () -> Unit,
@@ -112,6 +114,7 @@ fun ActiveWorkoutScreen(
             items(activeWorkout.exercises, key = { it.sessionExercise.id }) { active ->
                 ExerciseCard(
                     active = active,
+                    onOpenExercise = { onOpenExercise(active.exercise.id) },
                     onWeightDown = { set -> viewModel.setWeight(set, ProgressionEngine.nextBellBelow(set.weightKg)) },
                     onWeightUp = { set -> viewModel.setWeight(set, ProgressionEngine.nextBellAbove(set.weightKg)) },
                     onRepsDown = { set -> viewModel.setReps(set, set.reps - 1) },
@@ -181,6 +184,7 @@ private fun SummaryStat(value: String, label: String, modifier: Modifier = Modif
 @Composable
 private fun ExerciseCard(
     active: ActiveExercise,
+    onOpenExercise: () -> Unit,
     onWeightDown: (WorkoutSet) -> Unit,
     onWeightUp: (WorkoutSet) -> Unit,
     onRepsDown: (WorkoutSet) -> Unit,
@@ -197,12 +201,25 @@ private fun ExerciseCard(
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = active.exercise.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onOpenExercise),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = active.exercise.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = "View instructions",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                     Spacer(Modifier.height(4.dp))
                     LevelChip(active.exercise.level)
                 }

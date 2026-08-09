@@ -172,6 +172,7 @@ private fun NavGraphBuilder.appDestinations(
             viewModel = viewModel,
             activeWorkout = uiState.activeWorkout,
             onAddExercise = { navController.navigate(Routes.EXERCISES) },
+            onOpenExercise = { navController.navigate(Routes.exerciseDetail(it)) },
             onFinish = {
                 viewModel.finishWorkout()
                 navController.popBackStack(Routes.HOME, inclusive = false)
