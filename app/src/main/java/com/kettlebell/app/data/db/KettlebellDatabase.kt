@@ -15,7 +15,7 @@ import androidx.room.TypeConverters
         Routine::class,
         RoutineExercise::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)

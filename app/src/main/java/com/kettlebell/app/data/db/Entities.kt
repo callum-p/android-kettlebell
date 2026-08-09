@@ -97,6 +97,10 @@ data class WorkoutSet(
     val reps: Int,
     val completed: Boolean,
     val completedAt: Long? = null,
+    /** Rate of perceived exertion, 1–10 (null if not logged). */
+    val rpe: Int? = null,
+    /** Optional free-text note for this set. */
+    val notes: String? = null,
 )
 
 /** A user-created workout routine. */

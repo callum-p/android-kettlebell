@@ -409,6 +409,12 @@ class WorkoutViewModel(
     fun setReps(set: WorkoutSet, reps: Int) =
         updateSet(set.copy(reps = reps.coerceIn(0, 100)))
 
+    fun setRpe(set: WorkoutSet, rpe: Int?) =
+        updateSet(set.copy(rpe = rpe?.coerceIn(1, 10)))
+
+    fun setNotes(set: WorkoutSet, notes: String?) =
+        updateSet(set.copy(notes = notes?.trim()?.ifBlank { null }))
+
     fun toggleSetCompleted(set: WorkoutSet, exercise: Exercise) = launchSafely("toggleSet") {
         val nowComplete = !set.completed
         repository.updateSet(

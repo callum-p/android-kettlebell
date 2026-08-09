@@ -29,13 +29,17 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.StickyNote2
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -134,6 +138,8 @@ fun ActiveWorkoutScreen(
                     onRepsUp = { set -> viewModel.setReps(set, set.reps + 1) },
                     onToggle = { set -> viewModel.toggleSetCompleted(set, active.exercise) },
                     onDeleteSet = { set -> viewModel.deleteSet(set) },
+                    onRpe = { set, rpe -> viewModel.setRpe(set, rpe) },
+                    onNotes = { set, notes -> viewModel.setNotes(set, notes) },
                     onAddSet = { viewModel.addSet(active) },
                     onRemoveExercise = { viewModel.removeExercise(active) },
                 )
@@ -209,6 +215,8 @@ private fun ExerciseCard(
     onRepsUp: (WorkoutSet) -> Unit,
     onToggle: (WorkoutSet) -> Unit,
     onDeleteSet: (WorkoutSet) -> Unit,
+    onRpe: (WorkoutSet, Int?) -> Unit,
+    onNotes: (WorkoutSet, String?) -> Unit,
     onAddSet: () -> Unit,
     onRemoveExercise: () -> Unit,
 ) {
@@ -309,6 +317,8 @@ private fun ExerciseCard(
                         onRepsUp = { onRepsUp(set) },
                         onToggle = { onToggle(set) },
                         onDelete = { onDeleteSet(set) },
+                        onRpe = { rpe -> onRpe(set, rpe) },
+                        onNotes = { notes -> onNotes(set, notes) },
                     )
                 }
 
@@ -346,6 +356,8 @@ private fun SetRow(
     onRepsUp: () -> Unit,
     onToggle: () -> Unit,
     onDelete: () -> Unit,
+    onRpe: (Int?) -> Unit,
+    onNotes: (String?) -> Unit,
 ) {
     val bg = if (set.completed) {
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
@@ -354,6 +366,7 @@ private fun SetRow(
     }
     val canWeightDown = set.weightKg > (bells.minOrNull() ?: set.weightKg)
     val canWeightUp = set.weightKg < (bells.maxOrNull() ?: set.weightKg)
+    var showNotes by remember { mutableStateOf(false) }
 
     Surface(
         color = bg,
@@ -368,6 +381,19 @@ private fun SetRow(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
                 )
+                IconButton(onClick = { showNotes = true }, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        Icons.Outlined.StickyNote2,
+                        contentDescription = "Set notes",
+                        tint = if (!set.notes.isNullOrBlank()) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                Spacer(Modifier.width(4.dp))
                 IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
                     Icon(
                         Icons.Filled.Close,
@@ -402,6 +428,18 @@ private fun SetRow(
                 )
             }
 
+            Spacer(Modifier.height(10.dp))
+            RpeRow(selected = set.rpe, onSelect = onRpe)
+
+            if (!set.notes.isNullOrBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "“${set.notes}”",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             Spacer(Modifier.height(12.dp))
             if (set.completed) {
                 Button(
@@ -424,4 +462,68 @@ private fun SetRow(
             }
         }
     }
+
+    if (showNotes) {
+        NotesDialog(
+            initial = set.notes.orEmpty(),
+            onDismiss = { showNotes = false },
+            onSave = { text ->
+                onNotes(text)
+                showNotes = false
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RpeRow(selected: Int?, onSelect: (Int?) -> Unit) {
+    Column {
+        Text(
+            text = "Effort (RPE)",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            (6..10).forEach { value ->
+                FilterChip(
+                    selected = selected == value,
+                    onClick = { onSelect(if (selected == value) null else value) },
+                    label = { Text("$value") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotesDialog(
+    initial: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Set notes") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                label = { Text("How did it feel?") },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(text) }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
 }
