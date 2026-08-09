@@ -1,0 +1,271 @@
+package com.kettlebell.app.ui.navigation
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.kettlebell.app.ui.WorkoutViewModel
+import com.kettlebell.app.ui.format.formatClock
+import com.kettlebell.app.ui.model.RestTimerState
+import com.kettlebell.app.ui.screens.ActiveWorkoutScreen
+import com.kettlebell.app.ui.screens.ExerciseDetailScreen
+import com.kettlebell.app.ui.screens.ExercisesScreen
+import com.kettlebell.app.ui.screens.HistoryScreen
+import com.kettlebell.app.ui.screens.HomeScreen
+import com.kettlebell.app.ui.screens.SettingsScreen
+import com.kettlebell.app.ui.screens.StartWorkoutScreen
+
+object Routes {
+    const val HOME = "home"
+    const val EXERCISES = "exercises"
+    const val HISTORY = "history"
+    const val SETTINGS = "settings"
+    const val START = "start"
+    const val ACTIVE = "active"
+    const val EXERCISE_DETAIL = "exercise"
+    const val EXERCISE_ARG = "exerciseId"
+
+    fun exerciseDetail(id: String) = "$EXERCISE_DETAIL/$id"
+}
+
+private data class TabItem(val route: String, val label: String, val icon: ImageVector)
+
+private val tabs = listOf(
+    TabItem(Routes.HOME, "Home", Icons.Filled.Home),
+    TabItem(Routes.EXERCISES, "Exercises", Icons.Filled.FitnessCenter),
+    TabItem(Routes.HISTORY, "History", Icons.Filled.History),
+    TabItem(Routes.SETTINGS, "Settings", Icons.Filled.Settings),
+)
+
+@Composable
+fun KettlebellRoot() {
+    val viewModel: WorkoutViewModel = viewModel(factory = WorkoutViewModel.Factory)
+    val navController = rememberNavController()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val restTimer by viewModel.restTimer.collectAsStateWithLifecycle()
+
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+    val showBottomBar = currentRoute in tabs.map { it.route }
+
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                if (showBottomBar) {
+                    BottomBar(currentRoute) { route -> navController.navigateTab(route) }
+                }
+            },
+        ) { padding ->
+            NavHost(
+                navController = navController,
+                startDestination = Routes.HOME,
+                modifier = Modifier.padding(padding),
+            ) {
+                appDestinations(navController, viewModel, uiState)
+            }
+        }
+
+        restTimer?.let { timer ->
+            RestTimerBar(
+                timer = timer,
+                onAdd = { viewModel.addRestTime(15) },
+                onSkip = { viewModel.cancelRest() },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+                    .padding(bottom = if (showBottomBar) 80.dp else 0.dp),
+            )
+        }
+    }
+}
+
+private fun NavGraphBuilder.appDestinations(
+    navController: NavHostController,
+    viewModel: WorkoutViewModel,
+    uiState: com.kettlebell.app.ui.model.WorkoutUiState,
+) {
+    composable(Routes.HOME) {
+        HomeScreen(
+            state = uiState,
+            onStartWorkout = { navController.navigate(Routes.START) },
+            onResumeWorkout = { navController.navigate(Routes.ACTIVE) },
+            onOpenExercise = { navController.navigate(Routes.exerciseDetail(it)) },
+            onSeeAllExercises = { navController.navigateTab(Routes.EXERCISES) },
+        )
+    }
+    composable(Routes.EXERCISES) {
+        ExercisesScreen(
+            exercises = uiState.exercises,
+            onOpenExercise = { navController.navigate(Routes.exerciseDetail(it)) },
+        )
+    }
+    composable(Routes.HISTORY) {
+        HistoryScreen(
+            history = uiState.history,
+            onDelete = viewModel::deleteSession,
+        )
+    }
+    composable(Routes.SETTINGS) {
+        SettingsScreen()
+    }
+    composable(Routes.START) {
+        StartWorkoutScreen(
+            hasActiveWorkout = uiState.activeWorkout != null,
+            onStart = { title, template ->
+                viewModel.startWorkout(title, template)
+                navController.popBackStack()
+                navController.navigate(Routes.ACTIVE)
+            },
+            onBack = { navController.popBackStack() },
+        )
+    }
+    composable(Routes.ACTIVE) {
+        ActiveWorkoutScreen(
+            viewModel = viewModel,
+            activeWorkout = uiState.activeWorkout,
+            onAddExercise = { navController.navigate(Routes.EXERCISES) },
+            onFinish = {
+                viewModel.finishWorkout()
+                navController.popBackStack(Routes.HOME, inclusive = false)
+            },
+            onDiscard = {
+                viewModel.discardWorkout()
+                navController.popBackStack(Routes.HOME, inclusive = false)
+            },
+            onBack = { navController.popBackStack() },
+        )
+    }
+    composable("${Routes.EXERCISE_DETAIL}/{${Routes.EXERCISE_ARG}}") { entry ->
+        val exerciseId = entry.arguments?.getString(Routes.EXERCISE_ARG).orEmpty()
+        ExerciseDetailScreen(
+            viewModel = viewModel,
+            exerciseId = exerciseId,
+            hasActiveWorkout = uiState.activeWorkout != null,
+            onBack = { navController.popBackStack() },
+        )
+    }
+}
+
+private fun NavHostController.navigateTab(route: String) {
+    navigate(route) {
+        popUpTo(Routes.HOME) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+@Composable
+private fun BottomBar(currentRoute: String?, onSelect: (String) -> Unit) {
+    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+        tabs.forEach { tab ->
+            NavigationBarItem(
+                selected = currentRoute == tab.route,
+                onClick = { onSelect(tab.route) },
+                icon = { Icon(tab.icon, contentDescription = tab.label) },
+                label = { Text(tab.label) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun RestTimerBar(
+    timer: RestTimerState,
+    onAdd: () -> Unit,
+    onSkip: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val container = if (timer.finished) {
+        MaterialTheme.colorScheme.secondaryContainer
+    } else {
+        MaterialTheme.colorScheme.primary
+    }
+    val content = if (timer.finished) {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    } else {
+        MaterialTheme.colorScheme.onPrimary
+    }
+    Surface(
+        color = container,
+        shape = RoundedCornerShape(20.dp),
+        shadowElevation = 8.dp,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = if (timer.finished) "Rest complete" else "Rest",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = content.copy(alpha = 0.85f),
+                )
+                Text(
+                    text = if (timer.finished) "Ready for ${timer.exerciseName}" else formatClock(timer.remainingSeconds),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = content,
+                )
+            }
+            if (!timer.finished) {
+                Surface(
+                    color = content.copy(alpha = 0.18f),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .clickable(onClick = onAdd)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "Add 15 seconds", tint = content, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(2.dp))
+                        Text("15s", color = content, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+                Spacer(Modifier.width(10.dp))
+            }
+            Button(onClick = onSkip) {
+                Text(if (timer.finished) "Done" else "Skip")
+            }
+        }
+    }
+}
