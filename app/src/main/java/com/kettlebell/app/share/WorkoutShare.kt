@@ -9,8 +9,10 @@ import com.kettlebell.app.ui.format.formatVolume
 import com.kettlebell.app.ui.format.formatWeight
 import com.kettlebell.app.ui.model.SessionSummary
 
-/** Builds a plain-text workout recap and hands it to the Android share sheet. */
+/** Builds a short plain-text workout recap and hands it to the Android share sheet. */
 object WorkoutShare {
+
+    private const val REPO_URL = "https://github.com/callum-p/android-kettlebell"
 
     fun shareSummary(context: Context, summary: SessionSummary, unit: WeightUnit) {
         val intent = Intent(Intent.ACTION_SEND).apply {
@@ -24,9 +26,7 @@ object WorkoutShare {
     }
 
     fun buildText(summary: SessionSummary, unit: WeightUnit): String = buildString {
-        appendLine("🏋️ ${summary.session.title}")
-        appendLine(formatDate(summary.session.startedAt))
-        appendLine()
+        appendLine("🏋️ ${summary.session.title} · ${formatDate(summary.session.startedAt)}")
 
         val headline = buildList {
             add("${summary.completedSets} sets")
@@ -38,16 +38,11 @@ object WorkoutShare {
         summary.exercises.forEach { completed ->
             val done = completed.sets.filter { it.completed }
             if (done.isEmpty()) return@forEach
-            appendLine()
-            appendLine("• ${completed.exercise.name}")
-            done.forEach { set ->
-                val rpe = set.rpe?.let { " @RPE $it" }.orEmpty()
-                appendLine("   ${formatWeight(set.weightKg, unit)} × ${set.reps}$rpe")
-                if (!set.notes.isNullOrBlank()) appendLine("     “${set.notes}”")
-            }
+            val sets = done.joinToString(", ") { "${formatWeight(it.weightKg, unit)}×${it.reps}" }
+            appendLine("• ${completed.exercise.name}: $sets")
         }
 
         appendLine()
-        append("Tracked with Kettlebell 💪")
+        append("Tracked with Kettlebell 💪 $REPO_URL")
     }
 }
