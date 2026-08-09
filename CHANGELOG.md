@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5
+- Point README latest-release block at v1.4
+- Surface latest release in the README, kept fresh by the workflow
+
+
 ## 1.4
 - Guarantee the release bump lands on the default branch
 - Trigger releases automatically on tag push
