@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6
+- Sign from a CI secret; remove committed keystore
+- Show changelog prominently in the update dialog; clearer skip
+- Add in-app updates from GitHub Releases
+
+
 ## 1.5
 - Point README latest-release block at v1.4
 - Surface latest release in the README, kept fresh by the workflow
