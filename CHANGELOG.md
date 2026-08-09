@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3
+- Fixed: your workouts are no longer lost when updating — data is now migrated, not reset
+- Shorter, cleaner shared workout summaries, now with a link to the app
+- The "What's new" notes now reliably appear after an update
+
 ## 0.0.1
 First published release — a complete, offline-first kettlebell training app.
 - 23 exercises across beginner, intermediate, and advanced levels, each with instructions and a YouTube demo
