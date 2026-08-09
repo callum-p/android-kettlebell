@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.1
+First published release — a complete, offline-first kettlebell training app.
+- 23 exercises across beginner, intermediate, and advanced levels, each with instructions and a YouTube demo
+- Guided routines, body-part workouts, and your own custom routines
+- Sets, reps, and automatic rest timers, plus RPE and notes per set
+- Smart weight progression based on the kettlebells you own
+- Timed modes: EMOM, interval, and AMRAP
+- Progress tracking: personal records, weekly volume, training heatmap, and 23 achievement badges
+- Daily reminders, light/dark themes with Material You, kg/lb units, and a home-screen widget
+- Local-first storage with optional Google Drive backup — no account required
+
 ## 1.2
 - Build your own routines — save, reorder, and launch them in one tap
 - Daily workout reminders at a time you choose
