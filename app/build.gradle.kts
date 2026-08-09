@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-val appVersionName = "1.7"
+val appVersionName = "1.8"
 
 /**
  * Extracts the release notes for [version] from the repo's CHANGELOG.md so the app can show a
@@ -50,7 +50,7 @@ android {
         applicationId = "com.kettlebell.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10700
+        versionCode = 10800
         versionName = appVersionName
 
         buildConfigField("String", "CHANGELOG", "\"${changelogFor(appVersionName).escapeForBuildConfig()}\"")

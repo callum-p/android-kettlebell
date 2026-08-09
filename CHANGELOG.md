@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8
+- Sign the main/PR debug build with the stable key too
+- Build a proper release APK for releases (not debug)
+- Add MIT License
+
+
 ## 1.7
 - Give clear feedback when a manual update check finds nothing
 
