@@ -18,7 +18,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Accessibility
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.SelfImprovement
@@ -29,6 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,13 +47,18 @@ import com.kettlebell.app.data.ExerciseCatalog
 import com.kettlebell.app.data.WorkoutTemplate
 import com.kettlebell.app.data.db.BodyPart
 import com.kettlebell.app.ui.components.LevelChip
+import com.kettlebell.app.ui.model.RoutineWithExercises
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StartWorkoutScreen(
     hasActiveWorkout: Boolean,
+    routines: List<RoutineWithExercises>,
     onStart: (String, WorkoutTemplate?) -> Unit,
     onStartBodyPart: (BodyPart) -> Unit,
+    onStartRoutine: (RoutineWithExercises) -> Unit,
+    onCreateRoutine: () -> Unit,
+    onEditRoutine: (Long) -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -76,6 +84,28 @@ fun StartWorkoutScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item { QuickStartCard { onStart("Quick Workout", null) } }
+
+            item {
+                Text(
+                    text = "Your routines",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+            items(routines) { routine ->
+                RoutineCard(
+                    routine = routine,
+                    onStart = { onStartRoutine(routine) },
+                    onEdit = { onEditRoutine(routine.routine.id) },
+                )
+            }
+            item {
+                OutlinedButton(onClick = onCreateRoutine, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Create a routine")
+                }
+            }
 
             item {
                 Text(
@@ -194,6 +224,55 @@ private fun BodyPartCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun RoutineCard(
+    routine: RoutineWithExercises,
+    onStart: () -> Unit,
+    onEdit: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = routine.routine.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        Icons.Filled.Edit,
+                        contentDescription = "Edit routine",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Text(
+                text = if (routine.exercises.isEmpty()) {
+                    "No exercises yet"
+                } else {
+                    routine.exercises.joinToString(", ") { it.name }
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+            )
+            Spacer(Modifier.height(14.dp))
+            Button(
+                onClick = onStart,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = routine.exercises.isNotEmpty(),
+            ) {
+                Text("Start ${routine.routine.name}")
+            }
         }
     }
 }

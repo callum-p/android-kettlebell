@@ -57,6 +57,33 @@ interface SessionExerciseDao {
 }
 
 @Dao
+interface RoutineDao {
+    @Query("SELECT * FROM routines ORDER BY name")
+    fun observeAll(): Flow<List<Routine>>
+
+    @Insert
+    suspend fun insert(routine: Routine): Long
+
+    @Query("UPDATE routines SET name = :name WHERE id = :id")
+    suspend fun rename(id: Long, name: String)
+
+    @Delete
+    suspend fun delete(routine: Routine)
+}
+
+@Dao
+interface RoutineExerciseDao {
+    @Query("SELECT * FROM routine_exercises ORDER BY position")
+    fun observeAll(): Flow<List<RoutineExercise>>
+
+    @Insert
+    suspend fun insert(routineExercise: RoutineExercise)
+
+    @Query("DELETE FROM routine_exercises WHERE routineId = :routineId")
+    suspend fun deleteForRoutine(routineId: Long)
+}
+
+@Dao
 interface WorkoutSetDao {
     @Query("SELECT * FROM sets ORDER BY setNumber")
     fun observeAll(): Flow<List<WorkoutSet>>

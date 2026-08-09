@@ -1,6 +1,7 @@
 package com.kettlebell.app.ui.model
 
 import com.kettlebell.app.data.db.Exercise
+import com.kettlebell.app.data.db.Routine
 import com.kettlebell.app.data.db.SessionExercise
 import com.kettlebell.app.data.db.WorkoutSession
 import com.kettlebell.app.data.db.WorkoutSet
@@ -68,6 +69,12 @@ data class ExerciseHistoryEntry(
     val topWeightKg: Double get() = sets.maxOfOrNull { it.weightKg } ?: 0.0
     val totalReps: Int get() = sets.sumOf { it.reps }
 }
+
+/** A user-created routine resolved to its exercises. */
+data class RoutineWithExercises(
+    val routine: Routine,
+    val exercises: List<Exercise>,
+)
 
 /** Complete state driving the app's screens. */
 data class WorkoutUiState(

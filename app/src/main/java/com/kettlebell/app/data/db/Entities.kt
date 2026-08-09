@@ -99,6 +99,34 @@ data class WorkoutSet(
     val completedAt: Long? = null,
 )
 
+/** A user-created workout routine. */
+@Entity(tableName = "routines")
+data class Routine(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val createdAt: Long,
+)
+
+/** Membership + ordering of an exercise within a [Routine]. */
+@Entity(
+    tableName = "routine_exercises",
+    foreignKeys = [
+        ForeignKey(
+            entity = Routine::class,
+            parentColumns = ["id"],
+            childColumns = ["routineId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("routineId")],
+)
+data class RoutineExercise(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val routineId: Long,
+    val exerciseId: String,
+    val position: Int,
+)
+
 /** Room type converters for the small non-primitive fields used above. */
 class Converters {
     @TypeConverter

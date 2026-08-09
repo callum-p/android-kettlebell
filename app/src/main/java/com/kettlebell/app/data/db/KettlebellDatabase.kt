@@ -12,8 +12,10 @@ import androidx.room.TypeConverters
         WorkoutSession::class,
         SessionExercise::class,
         WorkoutSet::class,
+        Routine::class,
+        RoutineExercise::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -22,6 +24,8 @@ abstract class KettlebellDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao
     abstract fun sessionExerciseDao(): SessionExerciseDao
     abstract fun workoutSetDao(): WorkoutSetDao
+    abstract fun routineDao(): RoutineDao
+    abstract fun routineExerciseDao(): RoutineExerciseDao
 
     companion object {
         @Volatile

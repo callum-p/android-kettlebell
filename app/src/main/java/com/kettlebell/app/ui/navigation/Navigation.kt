@@ -43,10 +43,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.kettlebell.app.ui.WorkoutViewModel
 import com.kettlebell.app.ui.components.CelebrationOverlay
 import com.kettlebell.app.ui.format.LocalWeightUnit
@@ -55,6 +57,7 @@ import com.kettlebell.app.ui.model.RestTimerState
 import com.kettlebell.app.ui.screens.ActiveWorkoutScreen
 import com.kettlebell.app.ui.screens.BadgesScreen
 import com.kettlebell.app.ui.screens.ExerciseDetailScreen
+import com.kettlebell.app.ui.screens.RoutineEditorScreen
 import com.kettlebell.app.ui.screens.ExercisesScreen
 import com.kettlebell.app.ui.screens.HistoryScreen
 import com.kettlebell.app.ui.screens.HomeScreen
@@ -72,8 +75,11 @@ object Routes {
     const val ACTIVE = "active"
     const val EXERCISE_DETAIL = "exercise"
     const val EXERCISE_ARG = "exerciseId"
+    const val ROUTINE_EDITOR = "routine_editor"
+    const val ROUTINE_ARG = "routineId"
 
     fun exerciseDetail(id: String) = "$EXERCISE_DETAIL/$id"
+    fun routineEditor(id: Long) = "$ROUTINE_EDITOR/$id"
 }
 
 private data class TabItem(val route: String, val label: String, val icon: ImageVector)
@@ -220,8 +226,10 @@ private fun NavGraphBuilder.appDestinations(
     }
     composable(Routes.START) {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        val routines by viewModel.routines.collectAsStateWithLifecycle()
         StartWorkoutScreen(
             hasActiveWorkout = uiState.activeWorkout != null,
+            routines = routines,
             onStart = { title, template ->
                 viewModel.startWorkout(title, template)
                 navController.popBackStack()
@@ -232,7 +240,25 @@ private fun NavGraphBuilder.appDestinations(
                 navController.popBackStack()
                 navController.navigate(Routes.ACTIVE)
             },
+            onStartRoutine = { routine ->
+                viewModel.startRoutine(routine)
+                navController.popBackStack()
+                navController.navigate(Routes.ACTIVE)
+            },
+            onCreateRoutine = { navController.navigate(Routes.routineEditor(-1L)) },
+            onEditRoutine = { id -> navController.navigate(Routes.routineEditor(id)) },
             onBack = { navController.popBackStack() },
+        )
+    }
+    composable(
+        route = "${Routes.ROUTINE_EDITOR}/{${Routes.ROUTINE_ARG}}",
+        arguments = listOf(navArgument(Routes.ROUTINE_ARG) { type = NavType.LongType }),
+    ) { entry ->
+        val id = entry.arguments?.getLong(Routes.ROUTINE_ARG) ?: -1L
+        RoutineEditorScreen(
+            viewModel = viewModel,
+            routineId = id,
+            onDone = { navController.popBackStack() },
         )
     }
     composable(Routes.ACTIVE) {

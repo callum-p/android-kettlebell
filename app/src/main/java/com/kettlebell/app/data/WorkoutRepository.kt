@@ -3,6 +3,8 @@ package com.kettlebell.app.data
 import androidx.sqlite.db.SimpleSQLiteQuery
 import com.kettlebell.app.data.db.Exercise
 import com.kettlebell.app.data.db.KettlebellDatabase
+import com.kettlebell.app.data.db.Routine
+import com.kettlebell.app.data.db.RoutineExercise
 import com.kettlebell.app.data.db.SessionExercise
 import com.kettlebell.app.data.db.WorkoutSession
 import com.kettlebell.app.data.db.WorkoutSet
@@ -31,6 +33,8 @@ class WorkoutRepository(
     val activeSession: Flow<WorkoutSession?> = gated { db.sessionDao().observeActive() }
     val sessionExercises: Flow<List<SessionExercise>> = gated { db.sessionExerciseDao().observeAll() }
     val sets: Flow<List<WorkoutSet>> = gated { db.workoutSetDao().observeAll() }
+    val routines: Flow<List<Routine>> = gated { db.routineDao().observeAll() }
+    val routineExercises: Flow<List<RoutineExercise>> = gated { db.routineExerciseDao().observeAll() }
 
     private fun <T> gated(source: () -> Flow<T>): Flow<T> = flow {
         bootReady.await()
@@ -121,4 +125,22 @@ class WorkoutRepository(
         db.sessionDao().update(session.copy(finishedAt = now))
 
     suspend fun deleteSession(session: WorkoutSession) = db.sessionDao().delete(session)
+
+    /** Create (id null) or update a routine and replace its ordered exercise list. */
+    suspend fun saveRoutine(id: Long?, name: String, exerciseIds: List<String>) {
+        val routineId = if (id == null || id <= 0L) {
+            db.routineDao().insert(Routine(name = name, createdAt = System.currentTimeMillis()))
+        } else {
+            db.routineDao().rename(id, name)
+            id
+        }
+        db.routineExerciseDao().deleteForRoutine(routineId)
+        exerciseIds.forEachIndexed { index, exerciseId ->
+            db.routineExerciseDao().insert(
+                RoutineExercise(routineId = routineId, exerciseId = exerciseId, position = index),
+            )
+        }
+    }
+
+    suspend fun deleteRoutine(routine: Routine) = db.routineDao().delete(routine)
 }

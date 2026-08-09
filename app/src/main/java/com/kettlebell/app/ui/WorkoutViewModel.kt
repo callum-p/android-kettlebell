@@ -17,6 +17,7 @@ import com.kettlebell.app.data.WorkoutRepository
 import com.kettlebell.app.data.WorkoutTemplate
 import com.kettlebell.app.data.db.BodyPart
 import com.kettlebell.app.data.db.Exercise
+import com.kettlebell.app.data.db.Routine
 import com.kettlebell.app.data.db.SessionExercise
 import com.kettlebell.app.data.db.WorkoutSession
 import com.kettlebell.app.data.db.WorkoutSet
@@ -35,6 +36,7 @@ import com.kettlebell.app.ui.model.CompletedExercise
 import com.kettlebell.app.ui.model.ExerciseHistoryEntry
 import com.kettlebell.app.ui.model.HomeStats
 import com.kettlebell.app.ui.model.RestTimerState
+import com.kettlebell.app.ui.model.RoutineWithExercises
 import com.kettlebell.app.ui.model.SessionSummary
 import com.kettlebell.app.ui.model.WorkoutUiState
 import kotlinx.coroutines.Job
@@ -94,6 +96,21 @@ class WorkoutViewModel(
             SharingStarted.WhileSubscribed(5_000),
             WorkoutUiState(exercises = ExerciseCatalog.exercises),
         )
+
+    val routines: StateFlow<List<RoutineWithExercises>> = combine(
+        repository.routines,
+        repository.routineExercises,
+    ) { routines, routineExercises ->
+        routines.map { routine ->
+            RoutineWithExercises(
+                routine = routine,
+                exercises = routineExercises
+                    .filter { it.routineId == routine.id }
+                    .sortedBy { it.position }
+                    .mapNotNull { ExerciseCatalog.byId(it.exerciseId) },
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _restTimer = MutableStateFlow<RestTimerState?>(null)
     val restTimer: StateFlow<RestTimerState?> = _restTimer.asStateFlow()
@@ -324,6 +341,23 @@ class WorkoutViewModel(
         exercises.forEach { exercise ->
             repository.addExerciseToSession(sessionId, exercise, recommendationFor(exercise))
         }
+    }
+
+    fun startRoutine(routine: RoutineWithExercises) = launchSafely("startRoutine") {
+        val sessionId = repository.startWorkout(routine.routine.name, System.currentTimeMillis())
+        routine.exercises.forEach { exercise ->
+            repository.addExerciseToSession(sessionId, exercise, recommendationFor(exercise))
+        }
+    }
+
+    fun routineById(id: Long): RoutineWithExercises? = routines.value.firstOrNull { it.routine.id == id }
+
+    fun saveRoutine(id: Long?, name: String, exerciseIds: List<String>) = launchSafely("saveRoutine") {
+        repository.saveRoutine(id, name.trim(), exerciseIds)
+    }
+
+    fun deleteRoutine(routine: Routine) = launchSafely("deleteRoutine") {
+        repository.deleteRoutine(routine)
     }
 
     fun addExerciseToActive(exercise: Exercise) = launchSafely("addExercise") {
