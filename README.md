@@ -8,7 +8,8 @@ required — install and go.
 ## Features
 
 - **Start a workout** — pick a guided routine (Beginner Foundations, Intermediate
-  Strength, Advanced Power) or start an empty session and add exercises as you go.
+  Strength, Advanced Power), target a specific body part (chest, core, legs, back,
+  arms, shoulders), or start an empty session and add exercises as you go.
 - **Exercises with sets & rest timers** — each exercise holds multiple working sets with
   weight/rep steppers, a one-tap "set complete" toggle, and an automatic rest countdown
   between sets (with skip / +15s controls).

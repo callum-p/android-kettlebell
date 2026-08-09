@@ -10,6 +10,7 @@ import com.kettlebell.app.data.ProgressionEngine
 import com.kettlebell.app.data.Recommendation
 import com.kettlebell.app.data.WorkoutRepository
 import com.kettlebell.app.data.WorkoutTemplate
+import com.kettlebell.app.data.db.BodyPart
 import com.kettlebell.app.data.db.Exercise
 import com.kettlebell.app.data.db.SessionExercise
 import com.kettlebell.app.data.db.WorkoutSession
@@ -174,6 +175,15 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             if (exercise != null) {
                 repository.addExerciseToSession(sessionId, exercise, recommendationFor(exercise))
             }
+        }
+    }
+
+    /** Starts a workout focused on a body part, pre-filled with matching exercises. */
+    fun startBodyPartWorkout(bodyPart: BodyPart) = launchSafely("startBodyPartWorkout") {
+        val exercises = ExerciseCatalog.forBodyPart(bodyPart).take(5)
+        val sessionId = repository.startWorkout("${bodyPart.label} Workout", System.currentTimeMillis())
+        exercises.forEach { exercise ->
+            repository.addExerciseToSession(sessionId, exercise, recommendationFor(exercise))
         }
     }
 

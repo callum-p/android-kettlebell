@@ -13,6 +13,16 @@ enum class Level(val label: String) {
     ADVANCED("Advanced"),
 }
 
+/** Body areas an exercise targets, used to build body-part-focused workouts. */
+enum class BodyPart(val label: String) {
+    CHEST("Chest"),
+    CORE("Core"),
+    LEGS("Legs"),
+    BACK("Back"),
+    ARMS("Arms"),
+    SHOULDERS("Shoulders"),
+}
+
 /**
  * A kettlebell exercise from the built-in catalogue. Rows are seeded on first launch and are
  * effectively read-only for the user.
@@ -26,6 +36,7 @@ data class Exercise(
     val primaryMuscles: String,
     val description: String,
     val instructions: List<String>,
+    val bodyParts: List<BodyPart> = emptyList(),
     val youtubeUrl: String = "",
     val repRangeLow: Int,
     val repRangeHigh: Int,
@@ -102,6 +113,13 @@ class Converters {
     @TypeConverter
     fun stringToInstructions(value: String): List<String> =
         if (value.isEmpty()) emptyList() else value.split(SEPARATOR)
+
+    @TypeConverter
+    fun bodyPartsToString(value: List<BodyPart>): String = value.joinToString(",") { it.name }
+
+    @TypeConverter
+    fun stringToBodyParts(value: String): List<BodyPart> =
+        if (value.isEmpty()) emptyList() else value.split(",").map { BodyPart.valueOf(it) }
 
     private companion object {
         const val SEPARATOR = "|~|"

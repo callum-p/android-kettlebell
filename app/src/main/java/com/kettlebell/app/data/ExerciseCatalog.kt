@@ -1,5 +1,6 @@
 package com.kettlebell.app.data
 
+import com.kettlebell.app.data.db.BodyPart
 import com.kettlebell.app.data.db.Exercise
 import com.kettlebell.app.data.db.Level
 
@@ -14,7 +15,7 @@ data class WorkoutTemplate(
 
 /**
  * The built-in library of kettlebell exercises and starter routines. This is the single source of
- * truth that gets seeded into the database on first launch.
+ * truth for exercise definitions across the app.
  */
 object ExerciseCatalog {
 
@@ -46,6 +47,7 @@ object ExerciseCatalog {
                 "Hike the bell back between your legs, then snap your hips forward to swing it to chest height.",
                 "Let the bell float, then guide it back down into the next hinge. Keep arms relaxed.",
             ),
+            bodyParts = listOf(BodyPart.LEGS, BodyPart.BACK, BodyPart.CORE),
             repRangeLow = 10,
             repRangeHigh = 15,
             defaultSets = 3,
@@ -66,6 +68,7 @@ object ExerciseCatalog {
                 "Sit back and down, keeping your chest up and elbows inside your knees.",
                 "Drive through your heels to stand back up, squeezing your glutes at the top.",
             ),
+            bodyParts = listOf(BodyPart.LEGS, BodyPart.CORE),
             repRangeLow = 8,
             repRangeHigh = 12,
             defaultSets = 3,
@@ -85,6 +88,7 @@ object ExerciseCatalog {
                 "Push the floor away and stand tall, locking out your hips.",
                 "Reverse under control to place the bell down softly.",
             ),
+            bodyParts = listOf(BodyPart.LEGS, BodyPart.BACK),
             repRangeLow = 8,
             repRangeHigh = 12,
             defaultSets = 3,
@@ -104,11 +108,96 @@ object ExerciseCatalog {
                 "Squeeze your shoulder blade at the top.",
                 "Lower under control and repeat, then switch sides.",
             ),
+            bodyParts = listOf(BodyPart.BACK, BodyPart.ARMS),
             repRangeLow = 8,
             repRangeHigh = 12,
             defaultSets = 3,
             defaultRestSeconds = 60,
             startingWeightKg = 12.0,
+        ),
+        Exercise(
+            id = "floor_press",
+            name = "Floor Press",
+            level = Level.BEGINNER,
+            category = "Chest",
+            primaryMuscles = "Chest, Triceps, Shoulders",
+            description = "The go-to kettlebell chest builder. Pressing from the floor is shoulder-" +
+                "friendly and lets you push heavier bells safely.",
+            instructions = listOf(
+                "Lie on your back with a kettlebell racked on one side, knees bent.",
+                "Press the bell straight up until your arm is locked out.",
+                "Lower under control until your triceps touches the floor.",
+                "Pause, then press again. Complete the reps and switch sides.",
+            ),
+            bodyParts = listOf(BodyPart.CHEST, BodyPart.ARMS),
+            repRangeLow = 8,
+            repRangeHigh = 12,
+            defaultSets = 3,
+            defaultRestSeconds = 75,
+            startingWeightKg = 12.0,
+        ),
+        Exercise(
+            id = "bicep_curl",
+            name = "Kettlebell Bicep Curl",
+            level = Level.BEGINNER,
+            category = "Arms",
+            primaryMuscles = "Biceps, Forearms",
+            description = "A direct arm builder. The offset kettlebell load hits the biceps hard " +
+                "through a full range of motion.",
+            instructions = listOf(
+                "Hold a kettlebell in each hand (or one), arms hanging by your sides.",
+                "Keep your elbows pinned to your ribs.",
+                "Curl the bells up, turning the palms toward you at the top.",
+                "Lower slowly under control and repeat.",
+            ),
+            bodyParts = listOf(BodyPart.ARMS),
+            repRangeLow = 8,
+            repRangeHigh = 12,
+            defaultSets = 3,
+            defaultRestSeconds = 60,
+            startingWeightKg = 8.0,
+        ),
+        Exercise(
+            id = "triceps_extension",
+            name = "Overhead Triceps Extension",
+            level = Level.BEGINNER,
+            category = "Arms",
+            primaryMuscles = "Triceps, Shoulders",
+            description = "Targets the triceps with an overhead stretch, also challenging shoulder " +
+                "and core stability.",
+            instructions = listOf(
+                "Hold a kettlebell by the horns overhead with both hands.",
+                "Keep your elbows pointing forward and ribs down.",
+                "Lower the bell behind your head by bending the elbows.",
+                "Extend back to lockout, squeezing the triceps.",
+            ),
+            bodyParts = listOf(BodyPart.ARMS, BodyPart.SHOULDERS),
+            repRangeLow = 8,
+            repRangeHigh = 12,
+            defaultSets = 3,
+            defaultRestSeconds = 60,
+            startingWeightKg = 8.0,
+        ),
+        Exercise(
+            id = "russian_twist",
+            name = "Russian Twist",
+            level = Level.BEGINNER,
+            category = "Core",
+            primaryMuscles = "Obliques, Abs",
+            description = "A rotational core burner that carves out the obliques. Count each side " +
+                "as one rep.",
+            instructions = listOf(
+                "Sit on the floor holding a kettlebell by the horns, knees bent.",
+                "Lean back slightly to engage your core, chest tall.",
+                "Rotate the bell to tap the floor on one side.",
+                "Rotate to the other side under control, keeping the core braced.",
+            ),
+            bodyParts = listOf(BodyPart.CORE),
+            repRangeLow = 10,
+            repRangeHigh = 20,
+            defaultSets = 3,
+            defaultRestSeconds = 45,
+            startingWeightKg = 8.0,
         ),
         Exercise(
             id = "halo",
@@ -123,6 +212,7 @@ object ExerciseCatalog {
                 "Move slowly and keep your ribs down and core braced.",
                 "Complete the reps in one direction, then reverse.",
             ),
+            bodyParts = listOf(BodyPart.SHOULDERS, BodyPart.CORE),
             repRangeLow = 6,
             repRangeHigh = 10,
             defaultSets = 2,
@@ -143,6 +233,7 @@ object ExerciseCatalog {
                 "Walk with short, controlled steps, bracing your core.",
                 "Keep breathing and maintain posture for the full distance.",
             ),
+            bodyParts = listOf(BodyPart.CORE, BodyPart.BACK),
             repRangeLow = 20,
             repRangeHigh = 40,
             defaultSets = 3,
@@ -164,9 +255,31 @@ object ExerciseCatalog {
                 "Resist rotation by bracing your core hard.",
                 "Complete the reps, then switch hands.",
             ),
+            bodyParts = listOf(BodyPart.LEGS, BodyPart.BACK, BodyPart.CORE),
             repRangeLow = 8,
             repRangeHigh = 12,
             defaultSets = 4,
+            defaultRestSeconds = 60,
+            startingWeightKg = 16.0,
+        ),
+        Exercise(
+            id = "push_up_kb",
+            name = "Kettlebell Push-Up",
+            level = Level.INTERMEDIATE,
+            category = "Chest",
+            primaryMuscles = "Chest, Triceps, Core",
+            description = "Push-ups with hands on the bells add extra range of motion and a stability " +
+                "challenge for the chest and core.",
+            instructions = listOf(
+                "Grip a kettlebell handle in each hand in a plank position.",
+                "Keep your body in a straight line, core braced.",
+                "Lower your chest between the bells under control.",
+                "Press back up to lockout. Keep the bells steady throughout.",
+            ),
+            bodyParts = listOf(BodyPart.CHEST, BodyPart.ARMS, BodyPart.CORE),
+            repRangeLow = 6,
+            repRangeHigh = 15,
+            defaultSets = 3,
             defaultRestSeconds = 60,
             startingWeightKg = 16.0,
         ),
@@ -183,6 +296,7 @@ object ExerciseCatalog {
                 "Guide your hand 'through' the handle to catch it softly in the rack.",
                 "Lower back down under control and repeat.",
             ),
+            bodyParts = listOf(BodyPart.BACK, BodyPart.LEGS, BodyPart.SHOULDERS),
             repRangeLow = 6,
             repRangeHigh = 10,
             defaultSets = 4,
@@ -202,6 +316,7 @@ object ExerciseCatalog {
                 "Drive up through mid-foot to standing.",
                 "Keep the bell glued to your body throughout.",
             ),
+            bodyParts = listOf(BodyPart.LEGS, BodyPart.CORE),
             repRangeLow = 6,
             repRangeHigh = 10,
             defaultSets = 4,
@@ -221,6 +336,7 @@ object ExerciseCatalog {
                 "Lock out with your bicep by your ear.",
                 "Lower under control back to the rack.",
             ),
+            bodyParts = listOf(BodyPart.SHOULDERS, BodyPart.ARMS),
             repRangeLow = 5,
             repRangeHigh = 8,
             defaultSets = 4,
@@ -240,6 +356,7 @@ object ExerciseCatalog {
                 "Use the momentum to punch the bell overhead to lockout.",
                 "Lower to the rack and reset for the next rep.",
             ),
+            bodyParts = listOf(BodyPart.SHOULDERS, BodyPart.LEGS, BodyPart.ARMS),
             repRangeLow = 5,
             repRangeHigh = 8,
             defaultSets = 4,
@@ -259,6 +376,28 @@ object ExerciseCatalog {
                 "Drive through the front heel to return to standing.",
                 "Complete the reps, then switch sides.",
             ),
+            bodyParts = listOf(BodyPart.LEGS, BodyPart.CORE),
+            repRangeLow = 6,
+            repRangeHigh = 10,
+            defaultSets = 3,
+            defaultRestSeconds = 75,
+            startingWeightKg = 12.0,
+        ),
+        Exercise(
+            id = "renegade_row",
+            name = "Renegade Row",
+            level = Level.INTERMEDIATE,
+            category = "Back",
+            primaryMuscles = "Back, Core, Arms",
+            description = "A plank-and-row combo that hammers the back and lats while forcing the " +
+                "core to resist rotation.",
+            instructions = listOf(
+                "Start in a plank gripping a kettlebell in each hand.",
+                "Keep hips level and core tight.",
+                "Row one bell to your hip while balancing on the other.",
+                "Lower under control and alternate sides each rep.",
+            ),
+            bodyParts = listOf(BodyPart.BACK, BodyPart.CORE, BodyPart.ARMS),
             repRangeLow = 6,
             repRangeHigh = 10,
             defaultSets = 3,
@@ -280,6 +419,7 @@ object ExerciseCatalog {
                 "Stand up while keeping the bell locked out overhead.",
                 "Reverse every step precisely to return to the floor.",
             ),
+            bodyParts = listOf(BodyPart.SHOULDERS, BodyPart.CORE, BodyPart.LEGS),
             repRangeLow = 3,
             repRangeHigh = 5,
             defaultSets = 3,
@@ -299,6 +439,7 @@ object ExerciseCatalog {
                 "Punch your hand through as the bell rotates to catch it overhead.",
                 "Lower back into the next rep in one smooth arc.",
             ),
+            bodyParts = listOf(BodyPart.SHOULDERS, BodyPart.BACK, BodyPart.LEGS),
             repRangeLow = 5,
             repRangeHigh = 10,
             defaultSets = 4,
@@ -318,6 +459,7 @@ object ExerciseCatalog {
                 "Squat to depth, then drive powerfully out of the hole.",
                 "Maintain tension on both bells throughout.",
             ),
+            bodyParts = listOf(BodyPart.LEGS, BodyPart.CORE),
             repRangeLow = 5,
             repRangeHigh = 8,
             defaultSets = 4,
@@ -337,6 +479,7 @@ object ExerciseCatalog {
                 "Reach your free hand down your leg, eyes on the bell.",
                 "Stand back up under control, then switch sides.",
             ),
+            bodyParts = listOf(BodyPart.CORE, BodyPart.SHOULDERS),
             repRangeLow = 4,
             repRangeHigh = 6,
             defaultSets = 3,
@@ -356,6 +499,7 @@ object ExerciseCatalog {
                 "Lower to the rack, then back to the hang for the next clean.",
                 "Keep a steady rhythm and breathe with the movement.",
             ),
+            bodyParts = listOf(BodyPart.SHOULDERS, BodyPart.LEGS, BodyPart.BACK, BodyPart.CORE),
             repRangeLow = 5,
             repRangeHigh = 10,
             defaultSets = 4,
@@ -389,4 +533,10 @@ object ExerciseCatalog {
     )
 
     fun byId(id: String): Exercise? = exercises.firstOrNull { it.id == id }
+
+    /** All exercises that train a given body part, easiest first. */
+    fun forBodyPart(bodyPart: BodyPart): List<Exercise> =
+        exercises
+            .filter { bodyPart in it.bodyParts }
+            .sortedWith(compareBy({ it.level.ordinal }, { it.name }))
 }

@@ -78,7 +78,6 @@ private val tabs = listOf(
 fun KettlebellRoot() {
     val viewModel: WorkoutViewModel = viewModel(factory = WorkoutViewModel.Factory)
     val navController = rememberNavController()
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val restTimer by viewModel.restTimer.collectAsStateWithLifecycle()
 
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -99,7 +98,7 @@ fun KettlebellRoot() {
                 startDestination = Routes.HOME,
                 modifier = Modifier.padding(padding),
             ) {
-                appDestinations(navController, viewModel, uiState)
+                appDestinations(navController, viewModel)
             }
         }
 
@@ -120,9 +119,11 @@ fun KettlebellRoot() {
 private fun NavGraphBuilder.appDestinations(
     navController: NavHostController,
     viewModel: WorkoutViewModel,
-    uiState: com.kettlebell.app.ui.model.WorkoutUiState,
 ) {
+    // Each destination collects uiState inside its own composable scope so it stays live —
+    // capturing it once at graph-construction time would leave every screen showing stale state.
     composable(Routes.HOME) {
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         HomeScreen(
             state = uiState,
             onStartWorkout = { navController.navigate(Routes.START) },
@@ -132,12 +133,14 @@ private fun NavGraphBuilder.appDestinations(
         )
     }
     composable(Routes.EXERCISES) {
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         ExercisesScreen(
             exercises = uiState.exercises,
             onOpenExercise = { navController.navigate(Routes.exerciseDetail(it)) },
         )
     }
     composable(Routes.HISTORY) {
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         HistoryScreen(
             history = uiState.history,
             onDelete = viewModel::deleteSession,
@@ -147,6 +150,7 @@ private fun NavGraphBuilder.appDestinations(
         SettingsScreen()
     }
     composable(Routes.START) {
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         StartWorkoutScreen(
             hasActiveWorkout = uiState.activeWorkout != null,
             onStart = { title, template ->
@@ -154,10 +158,16 @@ private fun NavGraphBuilder.appDestinations(
                 navController.popBackStack()
                 navController.navigate(Routes.ACTIVE)
             },
+            onStartBodyPart = { bodyPart ->
+                viewModel.startBodyPartWorkout(bodyPart)
+                navController.popBackStack()
+                navController.navigate(Routes.ACTIVE)
+            },
             onBack = { navController.popBackStack() },
         )
     }
     composable(Routes.ACTIVE) {
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         ActiveWorkoutScreen(
             viewModel = viewModel,
             activeWorkout = uiState.activeWorkout,
@@ -175,6 +185,7 @@ private fun NavGraphBuilder.appDestinations(
     }
     composable("${Routes.EXERCISE_DETAIL}/{${Routes.EXERCISE_ARG}}") { entry ->
         val exerciseId = entry.arguments?.getString(Routes.EXERCISE_ARG).orEmpty()
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         ExerciseDetailScreen(
             viewModel = viewModel,
             exerciseId = exerciseId,

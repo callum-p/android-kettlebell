@@ -17,7 +17,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.SelfImprovement
+import androidx.compose.material.icons.filled.SportsGymnastics
+import androidx.compose.material.icons.filled.SportsMartialArts
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -31,9 +37,12 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kettlebell.app.data.ExerciseCatalog
 import com.kettlebell.app.data.WorkoutTemplate
+import com.kettlebell.app.data.db.BodyPart
 import com.kettlebell.app.ui.components.LevelChip
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,6 +50,7 @@ import com.kettlebell.app.ui.components.LevelChip
 fun StartWorkoutScreen(
     hasActiveWorkout: Boolean,
     onStart: (String, WorkoutTemplate?) -> Unit,
+    onStartBodyPart: (BodyPart) -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -66,6 +76,27 @@ fun StartWorkoutScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item { QuickStartCard { onStart("Quick Workout", null) } }
+
+            item {
+                Text(
+                    text = "Target a body part",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+            items(BodyPart.entries.chunked(2)) { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    row.forEach { bodyPart ->
+                        BodyPartCard(
+                            bodyPart = bodyPart,
+                            icon = iconFor(bodyPart),
+                            modifier = Modifier.weight(1f),
+                            onClick = { onStartBodyPart(bodyPart) },
+                        )
+                    }
+                }
+            }
+
             item {
                 Text(
                     text = "Guided routines",
@@ -113,6 +144,56 @@ private fun QuickStartCard(onClick: () -> Unit) {
                     contentColor = MaterialTheme.colorScheme.primary,
                 ),
             ) { Text("Start empty workout") }
+        }
+    }
+}
+
+private fun iconFor(bodyPart: BodyPart): ImageVector = when (bodyPart) {
+    BodyPart.CHEST -> Icons.Filled.FitnessCenter
+    BodyPart.CORE -> Icons.Filled.SelfImprovement
+    BodyPart.LEGS -> Icons.Filled.DirectionsRun
+    BodyPart.BACK -> Icons.Filled.Accessibility
+    BodyPart.ARMS -> Icons.Filled.SportsMartialArts
+    BodyPart.SHOULDERS -> Icons.Filled.SportsGymnastics
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BodyPartCard(
+    bodyPart: BodyPart,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val count = ExerciseCatalog.forBodyPart(bodyPart).size
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        onClick = onClick,
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 20.dp, horizontal = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(30.dp),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = bodyPart.label,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = "$count exercises",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
